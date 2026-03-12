@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudinary Admin - TEXA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --surface: rgba(255, 255, 255, 0.03);
+            --surface-hover: rgba(255, 255, 255, 0.05);
+            --surface-active: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            margin-top: 10px;
+        }
+
+        .btn-outline:hover {
+            background: var(--surface-hover);
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translate(-50%, 20px);
+            background: var(--success);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 100px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        #toast.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+
+        .sync-wrap {
+            display: flex;
+            gap: 8px;
+        }
+
+        .sync-wrap .btn {
+            width: auto;
+            padding: 0 16px;
+        }
+
+        /* Mobile Responsiveness Improvements */
+        @media (max-width: 576px) {
+            body {
+                padding: 20px 16px;
+            }
+
+            .container {
+                padding: 24px 20px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .sync-wrap {
+                flex-direction: column;
+            }
+
+            .sync-wrap .btn {
+                width: 100%;
+                padding: 12px 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2><i class="fa-solid fa-cloud"></i> Cloudinary Admin</h2>
+        <div class="subtitle">Simpan konfigurasi API Cloudinary secara aman di local browser.</div>
+
+        <div class="form-group">
+            <label>Sync API URL (Opsional)</label>
+            <div class="sync-wrap">
+                <input type="text" id="cloudinaryApiUrl" placeholder="Masukkan URL API Firestore di sini...">
+                <button id="syncBtn" class="btn" title="Sync Now"><i class="fa-solid fa-arrows-rotate"
+                        id="syncIcon"></i></button>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 24px 0;">
+
+        <div class="form-group">
+            <label>Cloud Name</label>
+            <input type="text" id="cloudName" placeholder="Contoh: duwtvcfwk">
+        </div>
+        <div class="form-group">
+            <label>API Key</label>
+            <input type="text" id="cloudinaryKey" placeholder="Contoh: 691892418329522">
+        </div>
+        <div class="form-group">
+            <label>API Secret</label>
+            <input type="password" id="cloudinarySecret" placeholder="Paste API Secret Anda di sini">
+        </div>
+
+        <button id="saveBtn" class="btn" style="margin-top: 24px;"><i class="fa-solid fa-floppy-disk"></i> Simpan
+            Pengaturan</button>
+        <a href="kling motion.html" id="backLink" style="text-decoration: none;">
+            <button class="btn btn-outline"><i class="fa-solid fa-arrow-left"></i> Kembali ke Aplikasi</button>
+        </a>
+    </div>
+
+    <div id="toast">Berhasil disimpan!</div>
+
+    <script>
+        const els = {
+            apiUrl: document.getElementById('cloudinaryApiUrl'),
+            cloudName: document.getElementById('cloudName'),
+            apiKey: document.getElementById('cloudinaryKey'),
+            apiSecret: document.getElementById('cloudinarySecret'),
+            syncBtn: document.getElementById('syncBtn'),
+            syncIcon: document.getElementById('syncIcon'),
+            saveBtn: document.getElementById('saveBtn'),
+            toast: document.getElementById('toast'),
+            backLink: document.getElementById('backLink')
+        };
+
+        // Fix back link if inside cpanel-deploy context (where the main file is index.html instead of kling motion.html)
+        if (window.location.pathname.includes('index.html') || window.location.pathname.includes('cpanel-deploy')) {
+            els.backLink.href = 'index.html';
+        }
+
+        function showToast(msg, type = 'success') {
+            els.toast.textContent = msg;
+            els.toast.style.background = type === 'success' ? 'var(--success)' : 'var(--danger)';
+            els.toast.style.boxShadow = type === 'success' ? '0 4px 15px rgba(16, 185, 129, 0.3)' : '0 4px 15px rgba(239, 68, 68, 0.3)';
+            els.toast.classList.add('show');
+            setTimeout(() => els.toast.classList.remove('show'), 3000);
+        }
+
+        // Load config from local storage
+        const DEFAULT_API_URL = 'https://firestore.googleapis.com/v1/projects/tekno-335f8/databases/(default)/documents/artifacts/default-app-id/public/data/public_files/cloudinary?key=AIzaSyCirtabCZOy3XMnNLUc-iKIYGegZJbPqhw';
+        els.apiUrl.value = localStorage.getItem('texa_cloudinary_api_url') || DEFAULT_API_URL;
+        els.cloudName.value = localStorage.getItem('texa_cloud_name') || 'duwtvcfwk';
+        els.apiKey.value = localStorage.getItem('texa_cloudinary_key') || '691892418329522';
+        els.apiSecret.value = localStorage.getItem('texa_cloudinary_secret') || '';
+
+        // Save Function
+        els.saveBtn.addEventListener('click', () => {
+            localStorage.setItem('texa_cloudinary_api_url', els.apiUrl.value.trim());
+            localStorage.setItem('texa_cloud_name', els.cloudName.value.trim());
+            localStorage.setItem('texa_cloudinary_key', els.apiKey.value.trim());
+            localStorage.setItem('texa_cloudinary_secret', els.apiSecret.value.trim());
+            showToast('Konfigurasi berhasil disimpan!', 'success');
+        });
+
+        // Sync Function
+        els.syncBtn.addEventListener('click', async () => {
+            const url = els.apiUrl.value.trim();
+            if (!url) {
+                showToast('Silakan masukkan API URL.', 'error');
+                return;
+            }
+            els.syncIcon.classList.add('fa-spin');
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Gagal mengakses API URL');
+                const data = await response.json();
+
+                const contentStr = data?.fields?.content?.stringValue || '';
+                if (!contentStr) throw new Error('Format Firestore tidak sesuai');
+
+                const lines = contentStr.split('\n').map(l => l.trim()).filter(l => l);
+                let updated = 0;
+                for (let i = 0; i < lines.length - 1; i++) {
+                    if (lines[i].includes('Cloud Name')) { els.cloudName.value = lines[i + 1]; updated++; }
+                    else if (lines[i].includes('API Key')) { els.apiKey.value = lines[i + 1]; updated++; }
+                    else if (lines[i].includes('API Secret')) { els.apiSecret.value = lines[i + 1]; updated++; }
+                }
+
+                if (updated > 0) {
+                    els.saveBtn.click(); // Auto-save after syncing
+                } else {
+                    showToast('Data Cloudinary tidak ditemukan di API.', 'error');
+                }
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            } finally {
+                els.syncIcon.classList.remove('fa-spin');
+            }
+        });
+
+        // Auto Sync unconditionally on load if URL is present
+        if (els.apiUrl.value) {
+            setTimeout(() => els.syncBtn.click(), 500); // 500ms delay to let UI render first
+        }
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,31 @@
+# TEXA Motion Control - Apache Configuration for cPanel
+# Enable URL rewriting for clean proxy routes
+
+RewriteEngine On
+
+# Route /api/* requests to PHP proxy
+RewriteRule ^api/(.*)$ proxy.php?route=api&path=/$1 [QSA,L]
+
+# Route /upload requests to PHP proxy
+RewriteRule ^upload$ proxy.php?route=upload [QSA,L]
+
+# Security: prevent direct access to sensitive files
+<FilesMatch "\.(env|log|bak)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Cache static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+</IfModule>
+
+# Enable GZIP compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>
