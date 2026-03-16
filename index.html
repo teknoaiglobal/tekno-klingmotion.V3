@@ -348,20 +348,35 @@
 
         .upload-progress {
             width: 80%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
             overflow: hidden;
             margin-top: 10px;
             display: none;
+            position: relative;
         }
 
         .upload-progress-bar {
             height: 100%;
             width: 0%;
-            background: var(--accent);
-            border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent), #6366f1);
+            border-radius: 6px;
             transition: width 0.3s;
+        }
+
+        .upload-status-text {
+            position: absolute;
+            bottom: 8px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent);
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
         }
 
         /* Buttons */
@@ -629,6 +644,150 @@
             color: var(--danger);
         }
 
+        /* Auto-Cut Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 2000;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .cut-modal-content {
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.show .cut-modal-content {
+            transform: translateY(0);
+        }
+
+        .cut-modal-header {
+            margin-bottom: 20px;
+        }
+
+        .cut-modal-header h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cut-modal-header p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .cut-preview {
+            width: 100%;
+            height: 250px;
+            background: #000;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .cut-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .cut-controls {
+            margin-bottom: 24px;
+        }
+
+        .cut-controls .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .cut-slider-container {
+            position: relative;
+            height: 8px;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .slider-track {
+            position: absolute;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        input[type=range].cut-slider {
+            position: absolute;
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            background: none;
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        input[type=range].cut-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            border: 2px solid white;
+            pointer-events: auto;
+            position: relative;
+            z-index: 3;
+        }
+
+        .cut-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--surface-hover);
+        }
+
         /* Mobile Responsiveness Improvements */
         @media (max-width: 768px) {
             #apiSettingsDropdown {
@@ -881,6 +1040,38 @@
             </div>
 
         </main>
+    <!-- Auto-Cut Video Modal -->
+    <div class="modal-overlay" id="cutModal">
+        <div class="cut-modal-content">
+            <div class="cut-modal-header">
+                <h3><i class="fa-solid fa-scissors" style="color: var(--accent);"></i> Potong Video Anda</h3>
+                <p>Maksimal durasi video untuk referensi adalah 30 detik. Silakan geser slider untuk memilih bagian yang ingin digunakan.</p>
+            </div>
+            
+            <div class="cut-preview">
+                <video id="cutVideoPreview" playsinline controls muted></video>
+            </div>
+            
+            <div class="cut-controls">
+                <div class="time-display">
+                    <span id="cutStartTime">00:00</span>
+                    <span id="cutEndTime">00:30</span>
+                </div>
+                <div class="cut-slider-container">
+                    <div class="slider-track" id="sliderTrack"></div>
+                    <input type="range" class="cut-slider start-slider" id="cutStartSlider" min="0" max="100" value="0" step="0.1">
+                    <input type="range" class="cut-slider end-slider" id="cutEndSlider" min="0" max="100" value="30" step="0.1">
+                </div>
+                <div id="cutDurationDisplay" style="text-align: center; font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                    Durasi terpilih: 30.0 detik (Maksimal 30s)
+                </div>
+            </div>
+            
+            <div class="cut-actions">
+                <button class="btn btn-secondary" id="cancelCutBtn" style="width: auto;">Batal</button>
+                <button class="btn btn-primary" id="confirmCutBtn" style="width: auto;"><i class="fa-solid fa-check"></i> Potong & Unggah</button>
+            </div>
+        </div>
     </div>
 
     <!-- Toast Notification -->
@@ -950,7 +1141,7 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        async function uploadToCloudinary(file, progressElement) {
+        async function uploadToCloudinary(file, progressElement, trimParams = null) {
             let cloudName = localStorage.getItem('texa_cloud_name') || 'duwtvcfwk';
             let apiKey = localStorage.getItem('texa_cloudinary_key') || '691892418329522';
             let apiSecret = localStorage.getItem('texa_cloudinary_secret');
@@ -978,13 +1169,25 @@
             }
 
             const timestamp = Math.floor(Date.now() / 1000);
-            const signatureString = `timestamp=${timestamp}${apiSecret}`;
-            const signature = await sha1(signatureString);
-
+            
+            // Handle optional trim parameters for video cropping
+            let signatureString = '';
             const formData = new FormData();
             formData.append('file', file);
             formData.append('api_key', apiKey);
             formData.append('timestamp', timestamp);
+            
+            if (trimParams && file.type.startsWith('video/')) {
+                // To apply eager transformation on Cloudinary
+                const eagerTransform = `eo_${trimParams.endTime},so_${trimParams.startTime}`;
+                formData.append('eager', eagerTransform);
+                formData.append('eager_async', 'true'); // Required for lengthy operations
+                signatureString = `eager=${eagerTransform}&eager_async=true&timestamp=${timestamp}${apiSecret}`;
+            } else {
+                signatureString = `timestamp=${timestamp}${apiSecret}`;
+            }
+
+            const signature = await sha1(signatureString);
             formData.append('signature', signature);
 
             const resourceType = file.type.startsWith('image/') ? 'image' : 'video';
@@ -998,13 +1201,28 @@
                     if (e.lengthComputable) {
                         const percent = Math.round((e.loaded / e.total) * 100);
                         progressElement.style.width = percent + '%';
+                        // Update percentage text if exists
+                        const statusText = progressElement.closest('.upload-zone')?.querySelector('.upload-status-text');
+                        if (statusText) {
+                            if (percent < 100) {
+                                statusText.textContent = `Mengunggah... ${percent}%`;
+                            } else {
+                                statusText.textContent = 'Memproses server...';
+                            }
+                        }
                     }
                 };
 
                 xhr.onload = () => {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         const response = JSON.parse(xhr.responseText);
-                        resolve(response.secure_url);
+                        
+                        // If we requested eager transformation, return that URL instead of original
+                        if (trimParams && response.eager && response.eager.length > 0) {
+                            resolve(response.eager[0].secure_url);
+                        } else {
+                            resolve(response.secure_url);
+                        }
                     } else {
                         try {
                             const error = JSON.parse(xhr.responseText);
@@ -1044,22 +1262,239 @@
             zone.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files));
             input.addEventListener('change', (e) => handleFiles(e.target.files));
 
+            // --- Auto Cut Modal Logic ---
+            const cutModal = document.getElementById('cutModal');
+            const cutVideoPreview = document.getElementById('cutVideoPreview');
+            const cutStartSlider = document.getElementById('cutStartSlider');
+            const cutEndSlider = document.getElementById('cutEndSlider');
+            const sliderTrack = document.getElementById('sliderTrack');
+            const cutDurationDisplay = document.getElementById('cutDurationDisplay');
+            const cutStartTimeEl = document.getElementById('cutStartTime');
+            const cutEndTimeEl = document.getElementById('cutEndTime');
+            const cancelCutBtn = document.getElementById('cancelCutBtn');
+            const confirmCutBtn = document.getElementById('confirmCutBtn');
+            
+            let currentCutFile = null;
+            let currentCutZone = null;
+            let currentCutProgressBar = null;
+            let currentCutPreviewContainer = null;
+            let maxVideoDuration = 0;
+            const MAX_CUT_DURATION = 30;
+            
+            function formatTime(seconds) {
+                const s = Math.floor(seconds);
+                const ms = Math.floor((seconds - s) * 10);
+                const min = Math.floor(s / 60);
+                const sec = s % 60;
+                return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}.${ms}`;
+            }
+
+            cancelCutBtn.addEventListener('click', () => {
+                cutModal.classList.remove('show');
+                cutVideoPreview.pause();
+                cutVideoPreview.src = '';
+                currentCutFile = null; // Reset
+            });
+
+            function updateSliderUI(e) {
+                let startVal = parseFloat(cutStartSlider.value);
+                let endVal = parseFloat(cutEndSlider.value);
+
+                // Ensure sliders don't cross incorrectly
+                if (startVal >= endVal) {
+                    if (e && e.target.id === 'cutStartSlider') {
+                        startVal = endVal - 0.1;
+                        cutStartSlider.value = startVal;
+                    } else if (e && e.target.id === 'cutEndSlider') {
+                        endVal = startVal + 0.1;
+                        cutEndSlider.value = endVal;
+                    }
+                }
+
+                // Enforce max 30s distance
+                if (endVal - startVal > MAX_CUT_DURATION) {
+                    if (e && e.target.id === 'cutStartSlider') {
+                        endVal = startVal + MAX_CUT_DURATION;
+                        cutEndSlider.value = endVal;
+                    } else if (e && e.target.id === 'cutEndSlider') {
+                        startVal = endVal - MAX_CUT_DURATION;
+                        cutStartSlider.value = startVal;
+                    }
+                }
+                
+                // Track styling percentage
+                const max = parseFloat(cutStartSlider.max);
+                const percent1 = (startVal / max) * 100;
+                const percent2 = (endVal / max) * 100;
+
+                sliderTrack.style.left = percent1 + '%';
+                sliderTrack.style.width = (percent2 - percent1) + '%';
+
+                cutStartTimeEl.textContent = formatTime(startVal);
+                cutEndTimeEl.textContent = formatTime(endVal);
+                
+                cutDurationDisplay.textContent = `Durasi terpilih: ${(endVal - startVal).toFixed(1)} detik (Maksimal 30s)`;
+                
+                // Seek preview video
+                if (e) {
+                    cutVideoPreview.currentTime = e.target.id === 'cutStartSlider' ? startVal : endVal;
+                }
+            }
+
+            cutStartSlider.addEventListener('input', updateSliderUI);
+            cutEndSlider.addEventListener('input', updateSliderUI);
+
+            confirmCutBtn.addEventListener('click', async () => {
+                cutModal.classList.remove('show');
+                cutVideoPreview.pause();
+                
+                const startTime = parseFloat(cutStartSlider.value);
+                const endTime = parseFloat(cutEndSlider.value);
+                
+                // Show UI loading
+                currentCutProgressBar.style.width = '0%';
+                const cutProgressContainer = currentCutZone.querySelector('.upload-progress');
+                cutProgressContainer.style.display = 'block';
+                currentCutPreviewContainer.style.display = 'flex';
+                
+                // Create or update upload status text for cut flow
+                let cutStatusText = currentCutZone.querySelector('.upload-status-text');
+                if (!cutStatusText) {
+                    cutStatusText = document.createElement('div');
+                    cutStatusText.className = 'upload-status-text';
+                    currentCutZone.appendChild(cutStatusText);
+                }
+                cutStatusText.textContent = 'Mengunggah video terpotong...';
+                cutStatusText.style.display = 'block';
+                cutStatusText.style.color = 'var(--accent)';
+                
+                // Disable generate button during upload
+                els.generateBtn.disabled = true;
+                els.generateBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up fa-beat-fade"></i> Mengunggah media...';
+                
+                // Preview initial frame
+                const url = window.URL.createObjectURL(currentCutFile);
+                currentCutPreviewContainer.innerHTML = `<video src="${url}#t=${startTime},${endTime}" autoplay loop muted></video>`;
+                
+                try {
+                    const trimParams = { startTime: startTime.toFixed(1), endTime: endTime.toFixed(1) };
+                    const cloudinaryUrl = await uploadToCloudinary(currentCutFile, currentCutProgressBar, trimParams);
+                    state.videoCatboxUrl = cloudinaryUrl;
+                    
+                    cutStatusText.textContent = '✅ Video terpotong berhasil diunggah!';
+                    cutStatusText.style.color = 'var(--success)';
+                    setTimeout(() => {
+                        cutProgressContainer.style.display = 'none';
+                        cutStatusText.style.display = 'none';
+                        cutStatusText.style.color = 'var(--accent)';
+                    }, 2000);
+                    
+                    const bothReady = state.imageCatboxUrl && state.videoCatboxUrl;
+                    if (bothReady) {
+                        showToast('✅ Video berhasil dipotong & diunggah! Semua media siap — silakan klik Generate.', 'success');
+                    } else {
+                        showToast('✅ Video berhasil dipotong & diunggah! Silakan unggah gambar karakter untuk melanjutkan.', 'success');
+                    }
+                } catch (error) {
+                    cutStatusText.textContent = '❌ Gagal!';
+                    cutStatusText.style.color = 'var(--danger)';
+                    showToast(`Gagal mengunggah video: ${error.message}`, 'error');
+                    currentCutPreviewContainer.style.display = 'none';
+                    setTimeout(() => {
+                        cutProgressContainer.style.display = 'none';
+                        cutStatusText.style.display = 'none';
+                        cutStatusText.style.color = 'var(--accent)';
+                    }, 2000);
+                } finally {
+                    els.generateBtn.disabled = false;
+                    els.generateBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Generate Motion';
+                }
+            });
+
             async function handleFiles(files) {
                 if (!files.length) return;
                 const file = files[0];
+                
+                // Securtiy/Bugfix: Immediately clear previous media state and preview when a new file is handled.
+                if (type === 'image') state.imageCatboxUrl = null;
+                if (type === 'video') state.videoCatboxUrl = null;
+                previewContainer.innerHTML = '';
+                previewContainer.style.display = 'none';
 
                 // Validate
                 if (type === 'image' && !file.type.startsWith('image/')) {
+                    input.value = '';
                     return showToast('Please upload an image file (JPG, PNG, WEBP)');
                 }
                 if (type === 'video' && !file.type.startsWith('video/')) {
+                    input.value = '';
                     return showToast('Please upload a video file (MP4, WEBM, MOV)');
                 }
 
-                // UI Update
+                if (type === 'video') {
+                    // Check video duration before uploading
+                    const videoObj = document.createElement('video');
+                    videoObj.preload = 'metadata';
+                    
+                    const durationPromise = new Promise((resolve, reject) => {
+                        videoObj.onloadedmetadata = function() {
+                            resolve(videoObj.duration);
+                        };
+                        videoObj.onerror = function() {
+                            reject(new Error("Gagal membaca file video."));
+                        };
+                    });
+                    
+                    videoObj.src = window.URL.createObjectURL(file);
+                    
+                    try {
+                        const duration = await durationPromise;
+                        if (duration > 30) {
+                            // Show Auto-Cut Modal
+                            maxVideoDuration = duration;
+                            currentCutFile = file;
+                            currentCutZone = zone;
+                            currentCutProgressBar = progressBar;
+                            currentCutPreviewContainer = previewContainer;
+                            
+                            cutStartSlider.max = duration;
+                            cutEndSlider.max = duration;
+                            cutStartSlider.value = 0;
+                            cutEndSlider.value = Math.min(30, duration);
+                            
+                            updateSliderUI(null);
+
+                            
+                            cutVideoPreview.src = videoObj.src;
+                            cutModal.classList.add('show');
+                            return; // Stop normal processing, await modal confirmation
+                        } else {
+                            window.URL.revokeObjectURL(videoObj.src);
+                        }
+                    } catch (e) {
+                        input.value = '';
+                        return showToast(e.message, 'error');
+                    }
+                }
+
+                // Normal UI Update (for images or videos <= 30s)
                 progressContainer.style.display = 'block';
                 progressBar.style.width = '0%';
                 previewContainer.style.display = 'flex';
+                
+                // Create or update upload status text
+                let statusText = zone.querySelector('.upload-status-text');
+                if (!statusText) {
+                    statusText = document.createElement('div');
+                    statusText.className = 'upload-status-text';
+                    zone.appendChild(statusText);
+                }
+                statusText.textContent = 'Memulai unggah...';
+                statusText.style.display = 'block';
+                
+                // Disable generate button during upload
+                els.generateBtn.disabled = true;
+                els.generateBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up fa-beat-fade"></i> Mengunggah media...';
 
                 // Show Local Preview Instantly
                 const reader = new FileReader();
@@ -1078,11 +1513,41 @@
                     const cloudinaryUrl = await uploadToCloudinary(file, progressBar);
                     if (type === 'image') state.imageCatboxUrl = cloudinaryUrl;
                     if (type === 'video') state.videoCatboxUrl = cloudinaryUrl;
-                    setTimeout(() => progressContainer.style.display = 'none', 1000);
+                    
+                    // Show success state
+                    statusText.textContent = '✅ Berhasil diunggah!';
+                    statusText.style.color = 'var(--success)';
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        statusText.style.display = 'none';
+                        statusText.style.color = 'var(--accent)';
+                    }, 2000);
+                    
+                    // Determine readiness for generation
+                    const mediaLabel = type === 'image' ? 'Gambar' : 'Video';
+                    const bothReady = state.imageCatboxUrl && state.videoCatboxUrl;
+                    if (bothReady) {
+                        showToast(`✅ ${mediaLabel} berhasil diunggah! Semua media siap — silakan klik Generate.`, 'success');
+                    } else {
+                        const missing = !state.imageCatboxUrl ? 'gambar karakter' : 'video referensi';
+                        showToast(`✅ ${mediaLabel} berhasil diunggah! Silakan unggah ${missing} untuk melanjutkan.`, 'success');
+                    }
                 } catch (error) {
-                    showToast(`Failed to upload ${type}: ${error.message}`);
+                    statusText.textContent = '❌ Gagal!';
+                    statusText.style.color = 'var(--danger)';
+                    showToast(`Gagal mengunggah ${type}: ${error.message}`, 'error');
                     previewContainer.style.display = 'none';
-                    progressContainer.style.display = 'none';
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        statusText.style.display = 'none';
+                        statusText.style.color = 'var(--accent)';
+                    }, 2000);
+                } finally {
+                    // Reset input value so the same file can be selected again
+                    input.value = '';
+                    // Re-enable generate button
+                    els.generateBtn.disabled = false;
+                    els.generateBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Generate Motion';
                 }
             }
         }

@@ -1,0 +1,19 @@
+{
+  "data": {
+    "createTime": 1773691179,
+    "downloadPage": "https://gofile.io/d/MrLhZB",
+    "id": "3127724e-71b9-41a2-8da8-8a7a15d20b1c",
+    "md5": "77ad44dcf616eb8ed723fce94abe5116",
+    "mimetype": "application/json",
+    "modTime": 1773691179,
+    "name": "vercel.json",
+    "parentFolder": "f056ed87-9b48-4936-849e-450ef78d3bd7",
+    "parentFolderCode": "MrLhZB",
+    "servers": [
+      "store-na-phx-3"
+    ],
+    "size": 125,
+    "type": "file"
+  },
+  "status": "ok"
+}
