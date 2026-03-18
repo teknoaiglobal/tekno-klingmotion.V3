@@ -855,7 +855,7 @@
                         alt="Logo" style="width: 100%; height: 100%; border-radius: 14px; object-fit: cover;"></div>
                 <div>
                     <h1>TEXA Motion Control</h1>
-                    <div class="subtitle">Powered by Kling 2.6 <span class="pro-badge">AI</span></div>
+                    <div class="subtitle">Powered by Kling <span class="pro-badge">AI</span></div>
                 </div>
             </div>
             <div class="controls" style="position: relative;">
@@ -903,6 +903,8 @@
                 <div class="input-wrap">
                     <i class="fa-solid fa-microchip"></i>
                     <select id="modelSelect">
+                        <option value="kling-v3-motion-control-pro">Kling 3 Pro</option>
+                        <option value="kling-v3-motion-control-std">Kling 3 Standard</option>
                         <option value="kling-v2-6-motion-control-pro">Kling 2.6 Pro</option>
                         <option value="kling-v2-6-motion-control-std">Kling 2.6 Standard</option>
                     </select>
@@ -1090,6 +1092,7 @@
             imageCatboxUrl: null,
             videoCatboxUrl: null,
             currentTaskId: null,
+            currentModel: null,
             pollingInterval: null,
             subtextInterval: null
         };
@@ -1565,6 +1568,8 @@
             const cfgScale = parseFloat(els.cfgScale.value);
             const prompt = document.getElementById('promptInput').value.trim();
 
+            state.currentModel = model;
+
             els.generateBtn.disabled = true;
             els.generateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting Task...';
             els.taskCard.style.display = 'flex';
@@ -1658,7 +1663,11 @@
             // Poll every 10 seconds (standard for video gen to avoid rate limits)
             state.pollingInterval = setInterval(async () => {
                 try {
-                    const response = await fetch(`${API_BASE}/v1/ai/image-to-video/kling-v2-6/${state.currentTaskId}`, {
+                    const pollingPath = state.currentModel.startsWith('kling-v3') 
+                        ? `/v1/ai/video/${state.currentModel}/${state.currentTaskId}`
+                        : `/v1/ai/image-to-video/kling-v2-6/${state.currentTaskId}`;
+
+                    const response = await fetch(`${API_BASE}${pollingPath}`, {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
@@ -1768,7 +1777,11 @@
 
             try {
                 // To check token, we just hit a lightweight endpoint
-                const res = await fetch(`${API_BASE}/v1/ai/image-to-video/kling-v2-6/tasks`, {
+                const checkPath = (localStorage.getItem('texa_last_model') || 'kling-v3-motion-control-pro').startsWith('kling-v3')
+                    ? '/v1/ai/video/kling-v3-motion-control-pro'
+                    : '/v1/ai/image-to-video/kling-v2-6/tasks';
+
+                const res = await fetch(`${API_BASE}${checkPath}`, {
                     headers: { 'x-freepik-api-key': key }
                 });
                 // If it's a 401 or 403, it's invalid. If it's 200 or even 400 (bad request but good auth), it's likely valid.
@@ -1853,6 +1866,17 @@
             els.cfgScale.addEventListener('input', (e) => {
                 els.cfgValue.textContent = parseFloat(e.target.value).toFixed(1);
             });
+
+            document.getElementById('modelSelect').addEventListener('change', (e) => {
+                localStorage.setItem('texa_last_model', e.target.value);
+                checkApiStatus();
+            });
+
+            // Load last model
+            const lastModel = localStorage.getItem('texa_last_model');
+            if (lastModel) {
+                document.getElementById('modelSelect').value = lastModel;
+            }
 
             els.resetMediaBtn.addEventListener('click', () => {
                 state.imageCatboxUrl = null;
