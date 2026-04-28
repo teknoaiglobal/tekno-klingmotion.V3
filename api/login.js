@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   // 1. Check if an existing user already claimed this voucher
   const existingUser = db.users.find(u => u.voucher_code === voucher_code);
   if (existingUser) {
-    return res.status(200).json({ success: true, user: existingUser });
+    return res.status(200).json({ success: true, user: existingUser, settings: db.settings });
   }
 
   // 2. Fallback: Unused Voucher Login (Creates a new user)
@@ -41,5 +41,5 @@ export default async function handler(req, res) {
   
   db.users.push(newUser);
   await saveDb();
-  return res.status(200).json({ success: true, user: newUser });
+  return res.status(200).json({ success: true, user: newUser, settings: db.settings });
 }

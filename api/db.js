@@ -17,7 +17,11 @@ const initialDb = {
     { id: '2', key_string: 'FPSX15b7532ef8a19adb491e7770e6a5df24', usage_count: 0, is_active: true },
     { id: '3', key_string: 'FPSX78a3ce4528de71ff66edc69fb5f3130c', usage_count: 0, is_active: true }
   ],
-  tasks: []
+  tasks: [],
+  settings: {
+    popupText: 'Kredit Anda tidak mencukupi (0). Silakan melakukan Top Up Kredit atau perpanjang VIP Plan untuk terus menikmati layanan AI Motion tanpa batas.',
+    whatsappLink: 'https://wa.me/6281234567890'
+  }
 };
 
 // We use global to persist state across hot reloads in dev mode,
@@ -33,7 +37,8 @@ export async function getDb() {
         users: data.users || [],
         vouchers: data.vouchers || [],
         apiKeys: data.apiKeys || [],
-        tasks: data.tasks || []
+        tasks: data.tasks || [],
+        settings: data.settings || initialDb.settings
       };
       return dbCache;
     }

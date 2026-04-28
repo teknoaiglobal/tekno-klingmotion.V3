@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitra Dashboard - TEKNO KLING MOTION</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            margin: 0;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        h2 {
+            margin-top: 0;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        input, select, textarea {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            font-family: inherit;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        table {
+            width: 100%;
+            text-align: left;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: var(--success);
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            z-index: 9999;
+        }
+        #toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #toast.error { background: var(--danger); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 style="margin: 0;"><i class="fa-solid fa-handshake"></i> Mitra Dashboard</h2>
+            <button onclick="addBlankUser()" class="btn btn-primary" style="padding: 8px 16px; width: auto;"><i class="fa-solid fa-plus"></i> Tambah Member</button>
+        </div>
+        <div class="subtitle">Kelola member Anda, buat voucher, dan atur pesan peringatan kustom.</div>
+
+        <div style="overflow-x: auto; margin-bottom: 24px;">
+            <table>
+                <thead>
+                    <tr style="color: var(--text-secondary);">
+                        <th style="min-width: 250px;">Member / Pengaturan Kustom</th>
+                        <th>Plan</th>
+                        <th>Hari</th>
+                        <th>Credits</th>
+                        <th style="min-width: 80px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+            </table>
+        </div>
+
+        <a href="kling motion.html" style="text-decoration: none;">
+            <button class="btn btn-outline" style="width: auto;"><i class="fa-solid fa-arrow-left"></i> Kembali ke Aplikasi</button>
+        </a>
+    </div>
+
+    <div id="toast">Berhasil disimpan!</div>
+
+    <script>
+        const MITRA_PASSWORD = 'mitra'; // Default password untuk Mitra
+
+        function requireMitraLogin() {
+            if (localStorage.getItem('texa_mitra_auth') === 'true') return;
+
+            document.body.style.overflow = 'hidden';
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.98)';
+            overlay.style.backdropFilter = 'blur(10px)';
+            overlay.style.zIndex = '999999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.innerHTML = `
+                <div style="background: var(--bg-card); padding: 32px; border-radius: 16px; border: 1px solid var(--border); width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                    <i class="fa-solid fa-handshake" style="font-size: 32px; color: var(--accent); margin-bottom: 16px;"></i>
+                    <h2 style="margin: 0 0 8px 0; font-size: 20px;">Mitra Access</h2>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px;">Masukkan Sandi Mitra untuk mengelola member Anda.</p>
+                    <input type="password" id="mitraPass" placeholder="Password" style="margin-bottom: 16px;">
+                    <button id="mitraLoginBtn" class="btn" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-right-to-bracket"></i> Masuk Dashboard</button>
+                    <div id="mitraError" style="color: var(--danger); font-size: 12px; margin-top: 12px; display: none;">Password salah!</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            document.getElementById('mitraLoginBtn').addEventListener('click', () => {
+                if (document.getElementById('mitraPass').value === MITRA_PASSWORD) {
+                    localStorage.setItem('texa_mitra_auth', 'true');
+                    document.body.style.overflow = 'auto';
+                    overlay.remove();
+                } else {
+                    const err = document.getElementById('mitraError');
+                    err.style.display = 'block';
+                    setTimeout(() => err.style.display = 'none', 2000);
+                }
+            });
+        }
+        requireMitraLogin();
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = type === 'error' ? 'error show' : 'show';
+            setTimeout(() => toast.className = '', 3000);
+        }
+
+        async function fetchMitraData() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const data = await res.json();
+                renderUsers(data.users || []);
+            } catch (e) {
+                console.error("Gagal load data", e);
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = users.map(u => {
+                const remainingDays = u.subscription_end_date 
+                    ? Math.max(0, Math.ceil((new Date(u.subscription_end_date) - Date.now()) / (1000 * 60 * 60 * 24)))
+                    : 0;
+                return `
+                <tr>
+                    <td style="vertical-align:top;">
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <input id="name_${u.id}" type="text" value="${u.name || ''}" placeholder="Nama Custom">
+                            <div style="display:flex; gap:4px;">
+                                <input id="voucher_${u.id}" type="text" value="${u.voucher_code || ''}" placeholder="Kode Voucher" style="flex:1; border-color: var(--accent); color: var(--accent); font-family:monospace;">
+                                <button onclick="document.getElementById('voucher_${u.id}').value = 'TEKNO-' + Math.random().toString(36).substring(2, 8).toUpperCase()" class="btn btn-outline" style="padding: 8px; width: auto;" title="Generate Auto Code"><i class="fa-solid fa-bolt"></i></button>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Pesan Kredit Habis & Kontak (Opsional):</div>
+                            <input id="mitra_wa_${u.id}" type="text" value="${u.mitra_whatsapp || ''}" placeholder="Link WhatsApp Mitra">
+                            <textarea id="mitra_txt_${u.id}" placeholder="Teks Popup Kustom. Kosongkan untuk memakai teks pusat." style="resize:vertical; min-height:50px;">${u.mitra_popup_text || ''}</textarea>
+                        </div>
+                    </td>
+                    <td style="vertical-align:top;">
+                        <select id="plan_${u.id}">
+                            <option value="free" ${u.plan==='free'?'selected':''}>Free</option>
+                            <option value="pro" ${u.plan==='pro'?'selected':''}>Pro</option>
+                            <option value="vip" ${u.plan==='vip'?'selected':''}>VIP</option>
+                        </select>
+                    </td>
+                    <td style="vertical-align:top;">
+                        <input id="days_${u.id}" type="number" value="${remainingDays}" style="width:70px;">
+                    </td>
+                    <td style="vertical-align:top;">
+                        <input id="credits_${u.id}" type="number" value="${u.credits}" style="width:70px;">
+                    </td>
+                    <td style="vertical-align:top;">
+                        <div style="display:flex; gap:4px; flex-direction:column;">
+                            <button onclick="saveUser('${u.id}')" class="btn btn-primary" style="padding: 8px;"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+                            <button onclick="deleteUser('${u.id}', this)" class="btn btn-outline" style="padding: 8px; color: var(--danger); border-color: var(--danger);"><i class="fa-solid fa-trash"></i> Hapus</button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        window.addBlankUser = async () => {
+            await fetch('/api/admin/users', { method: 'POST' });
+            fetchMitraData();
+        };
+
+        window.saveUser = async (id) => {
+            const plan = document.getElementById('plan_' + id).value;
+            const credits = document.getElementById('credits_' + id).value;
+            const duration_days = document.getElementById('days_' + id).value;
+            const name = document.getElementById('name_' + id).value;
+            const voucher_code = document.getElementById('voucher_' + id).value;
+            const mitra_wa = document.getElementById('mitra_wa_' + id);
+            const mitra_txt = document.getElementById('mitra_txt_' + id);
+            const mitra_whatsapp = mitra_wa ? mitra_wa.value.trim() : '';
+            const mitra_popup_text = mitra_txt ? mitra_txt.value.trim() : '';
+
+            await fetch('/api/admin/users', { 
+                method: 'PUT', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({id, plan, credits, duration_days, name, voucher_code, mitra_whatsapp, mitra_popup_text})
+            });
+            fetchMitraData();
+            showToast('Member berhasil disimpan!', 'success');
+        };
+
+        window.deleteUser = async (id, btn) => {
+            if (!btn.dataset.confirm) {
+                btn.dataset.confirm = '1';
+                btn.innerHTML = 'Yakin?';
+                btn.style.background = 'var(--danger)';
+                btn.style.color = '#fff';
+                setTimeout(() => {
+                    if (btn) {
+                        btn.dataset.confirm = '';
+                        btn.innerHTML = '<i class="fa-solid fa-trash"></i> Hapus';
+                        btn.style.background = 'transparent';
+                        btn.style.color = 'var(--danger)';
+                    }
+                }, 3000);
+                return;
+            }
+            await fetch('/api/admin/users', { 
+                method: 'DELETE', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({id})
+            });
+            fetchMitraData();
+            showToast('Member dihapus', 'success');
+        };
+
+        fetchMitraData();
+    </script>
+</body>
+</html>

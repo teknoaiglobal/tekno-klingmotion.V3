@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   const user = db.users.find(u => u.id === id);
   if (user) {
-    return res.status(200).json({ success: true, user });
+    return res.status(200).json({ success: true, user, settings: db.settings });
   }
 
   return res.status(404).json({ error: 'User tidak ditemukan.' });

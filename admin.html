@@ -398,6 +398,20 @@
                     <tbody id="keysTableBody"><tr><td colspan="4">Loading...</td></tr></tbody>
                 </table>
             </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 32px 0;">
+            <h2><i class="fa-brands fa-whatsapp"></i> Pengaturan Notifikasi Topup</h2>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Link Redirect WhatsApp Admin</label>
+                    <input type="text" id="adminWhatsappLink" placeholder="Contoh: https://wa.me/6281234567890" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px;">
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Teks Peringatan Kredit Habis</label>
+                    <textarea id="adminPopupText" rows="3" placeholder="Kredit Anda tidak mencukupi (0)." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px; resize: vertical;"></textarea>
+                </div>
+                <button onclick="saveAdminSettings()" class="btn btn-primary" style="width: auto; align-self: flex-start; padding: 8px 16px;"><i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan</button>
+            </div>
         `;
         
         // Insert right before the "Kembali ke Aplikasi" link
@@ -410,14 +424,19 @@
         // API Fetching
         async function fetchAdminData() {
             try {
-                const [uRes, kRes] = await Promise.all([
-                    fetch('/api/admin/users'), fetch('/api/admin/apikeys')
+                const [uRes, kRes, sRes] = await Promise.all([
+                    fetch('/api/admin/users'), fetch('/api/admin/apikeys'), fetch('/api/admin/settings')
                 ]);
                 const uData = await uRes.json();
                 const kData = await kRes.json();
+                const sData = await sRes.json();
 
                 renderUsers(uData.users || []);
                 renderApiKeys(kData.apiKeys || []);
+                if (sData.settings) {
+                    document.getElementById('adminWhatsappLink').value = sData.settings.whatsappLink || '';
+                    document.getElementById('adminPopupText').value = sData.settings.popupText || '';
+                }
             } catch (e) {
                 console.error("Gagal load data admin, pastikan server Vercel menyala.", e);
             }
@@ -438,6 +457,8 @@
                                 <input id="voucher_${u.id}" type="text" value="${u.voucher_code || ''}" placeholder="Kode Voucher" style="flex:1; background: rgba(0,0,0,0.3); border: 1px solid var(--accent); color: var(--accent); padding: 4px; border-radius: 4px; font-size:12px; font-family:monospace;">
                                 <button onclick="document.getElementById('voucher_${u.id}').value = 'TEKNO-' + Math.random().toString(36).substring(2, 8).toUpperCase()" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; margin: 0; width: auto;" title="Generate Auto Code"><i class="fa-solid fa-bolt"></i></button>
                             </div>
+                            <input id="mitra_wa_${u.id}" type="text" value="${u.mitra_whatsapp || ''}" placeholder="Mitra WhatsApp Link (Opsional)" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px; font-size:11px;">
+                            <textarea id="mitra_txt_${u.id}" placeholder="Mitra Popup Text (Opsional)" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px; font-size:11px; resize:vertical; min-height:40px;">${u.mitra_popup_text || ''}</textarea>
                         </div>
                     </td>
                     <td style="padding: 8px; vertical-align:top;">
@@ -492,14 +513,33 @@
             const duration_days = document.getElementById('days_' + id).value;
             const name = document.getElementById('name_' + id).value;
             const voucher_code = document.getElementById('voucher_' + id).value;
+            const mitra_wa = document.getElementById('mitra_wa_' + id);
+            const mitra_txt = document.getElementById('mitra_txt_' + id);
+            const mitra_whatsapp = mitra_wa ? mitra_wa.value.trim() : '';
+            const mitra_popup_text = mitra_txt ? mitra_txt.value.trim() : '';
 
             await fetch('/api/admin/users', { 
                 method: 'PUT', 
                 headers: {'Content-Type':'application/json'}, 
-                body: JSON.stringify({id, plan, credits, duration_days, name, voucher_code})
+                body: JSON.stringify({id, plan, credits, duration_days, name, voucher_code, mitra_whatsapp, mitra_popup_text})
             });
             fetchAdminData();
             showToast('User berhasil disimpan!', 'success');
+        };
+
+        window.saveAdminSettings = async () => {
+            const wa = document.getElementById('adminWhatsappLink').value.trim();
+            const pop = document.getElementById('adminPopupText').value.trim();
+            try {
+                await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ whatsappLink: wa, popupText: pop })
+                });
+                showToast('Pengaturan Notifikasi berhasil disimpan!', 'success');
+            } catch(e) {
+                showToast('Gagal menyimpan: ' + e.message, 'error');
+            }
         };
 
         window.deleteUser = async (id, btn) => {

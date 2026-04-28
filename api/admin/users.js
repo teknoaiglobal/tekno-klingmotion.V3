@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PUT') {
-    const { id, plan, credits, duration_days, name, voucher_code } = req.body;
+    const { id, plan, credits, duration_days, name, voucher_code, mitra_whatsapp, mitra_popup_text } = req.body;
     const userIndex = db.users.findIndex(u => u.id === id);
     
     if (userIndex === -1) {
@@ -18,6 +18,8 @@ export default async function handler(req, res) {
     if (plan !== undefined) db.users[userIndex].plan = plan;
     if (credits !== undefined) db.users[userIndex].credits = parseInt(credits);
     if (name !== undefined) db.users[userIndex].name = name;
+    if (mitra_whatsapp !== undefined) db.users[userIndex].mitra_whatsapp = mitra_whatsapp;
+    if (mitra_popup_text !== undefined) db.users[userIndex].mitra_popup_text = mitra_popup_text;
     if (voucher_code !== undefined) {
       db.users[userIndex].voucher_code = voucher_code;
       // Mark it as used in the voucher portal so it disappears
@@ -47,15 +49,19 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+    const { name, plan, credits, duration_days, mitra_whatsapp, mitra_popup_text, role } = req.body || {};
     const newUser = {
       id: 'user_' + Date.now(),
-      name: 'New Member',
+      name: name || 'New Member',
       voucher_code: '',
-      role: 'member',
-      plan: 'free',
-      credits: 0,
-      subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      role: role || 'member',
+      plan: plan || 'free',
+      credits: credits !== undefined ? parseInt(credits) : 0,
+      subscription_end_date: new Date(Date.now() + (duration_days || 30) * 24 * 60 * 60 * 1000).toISOString(),
     };
+    if (mitra_whatsapp) newUser.mitra_whatsapp = mitra_whatsapp;
+    if (mitra_popup_text) newUser.mitra_popup_text = mitra_popup_text;
+    
     db.users.push(newUser);
     await saveDb();
     return res.status(200).json({ success: true, user: newUser });

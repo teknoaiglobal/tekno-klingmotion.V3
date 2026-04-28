@@ -188,14 +188,23 @@ export default async function handler(req, res) {
                 } catch(e) {}
             }
             
-            if (response.ok && req.method === 'GET' && (path.includes('/v1/ai/tasks/') || path.includes('/v1/ai/video/') || path.includes('/v1/ai/image-to-video/'))) {
+            if (req.method === 'GET' && (path.includes('/v1/ai/tasks/') || path.includes('/v1/ai/video/') || path.includes('/v1/ai/image-to-video/'))) {
                 try {
-                    const jsonData = JSON.parse(data);
-                    const status = jsonData.data?.status || jsonData.status;
-                    const taskId = jsonData.data?.task_id || jsonData.task_id || path.split('/').pop();
+                    let shouldRefund = false;
+                    const taskId = path.split('/').pop();
                     
-                    if (status === 'FAILED' || status === 'CANCELED') {
-                        const { db } = await import('./db.js');
+                    if (response.ok) {
+                        const jsonData = JSON.parse(data);
+                        const status = jsonData.data?.status || jsonData.status;
+                        if (status === 'FAILED' || status === 'CANCELED') shouldRefund = true;
+                    } else {
+                        // If Freepik returns 404 or other errors during polling, the task is lost
+                        shouldRefund = true;
+                    }
+                    
+                    if (shouldRefund) {
+                        const { getDb, saveDb } = await import('./db.js');
+                        const db = await getDb();
                         db.tasks = db.tasks || [];
                         const task = db.tasks.find(t => t.taskId === taskId && t.status !== 'REFUNDED');
                         if (task) {
@@ -203,6 +212,7 @@ export default async function handler(req, res) {
                             if (user) {
                                 user.credits += 1;
                                 task.status = 'REFUNDED';
+                                await saveDb();
                                 res.setHeader('X-Credit-Refunded', '1');
                             }
                         }

@@ -1565,7 +1565,15 @@
             // Start Generation Task
             // Start Generation Task
             els.generateBtn.addEventListener('click', async () => {
-                if (!state.apiKey && (localStorage.getItem('texa_api_mode') || 'server') !== 'server') return showToast('Masukkan token di Settings terlebih dahulu');
+                const isServerMode = (localStorage.getItem('texa_api_mode') || 'server') === 'server';
+                if (!state.apiKey && !isServerMode) return showToast('Masukkan token di Settings terlebih dahulu');
+                if (isServerMode) {
+                    const currentCredits = parseInt(localStorage.getItem('texa_user_credits') || '0');
+                    if (currentCredits <= 0) {
+                        showTopupPopup();
+                        return;
+                    }
+                }
                 if (!state.imageCatboxUrl) return showToast('👉 Image upload not complete. Please retry.');
                 if (!state.videoCatboxUrl) return showToast('Please upload a Reference Video first');
 
@@ -1628,7 +1636,11 @@
                     startPollingAllTasks();
 
                 } catch (error) {
-                    showToast(`Task Failed: ${sanitizeError(error.message)}`, 'error');
+                    if (error.message.toLowerCase().includes('insufficient credits') || error.message.toLowerCase().includes('kredit')) {
+                        showTopupPopup();
+                    } else {
+                        showToast(`Task Failed: ${sanitizeError(error.message)}`, 'error');
+                    }
                 } finally {
                     els.generateBtn.disabled = false;
                     els.generateBtn.innerHTML = originalBtnText;
@@ -1644,6 +1656,53 @@
                     return isManual ? 'Token Manual Anda Limit / Habis' : 'Silakan coba lagi (Sedang merotasi token server)';
                 }
                 return msg;
+            }
+
+            // Top Up Popup
+            async function showTopupPopup() {
+                // Fetch latest admin settings just in case
+                let adminWA = 'https://wa.me/6281234567890';
+                let adminText = 'Kredit Anda tidak mencukupi (0). Silakan melakukan Top Up Kredit atau perpanjang VIP Plan untuk terus menikmati layanan AI Motion tanpa batas.';
+                try {
+                    const res = await fetch('/api/admin/settings');
+                    const data = await res.json();
+                    if (data && data.settings) {
+                        adminWA = data.settings.whatsappLink || adminWA;
+                        adminText = data.settings.popupText || adminText;
+                    }
+                } catch(e) {}
+                
+                // Mitra override
+                const mitraWA = localStorage.getItem('texa_user_mitra_whatsapp');
+                const mitraText = localStorage.getItem('texa_user_mitra_popup_text');
+                
+                const finalWA = mitraWA || adminWA;
+                const finalText = mitraText || adminText;
+
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.background = 'rgba(0,0,0,0.85)';
+                overlay.style.backdropFilter = 'blur(10px)';
+                overlay.style.zIndex = '999999';
+                overlay.style.display = 'flex';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.innerHTML = `
+                    <div style="background: var(--bg-card); padding: 32px; border-radius: 16px; border: 1px solid var(--danger); width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(239, 68, 68, 0.2);">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 48px; color: var(--danger); margin-bottom: 20px;"></i>
+                        <h2 style="margin: 0 0 12px 0; color: white; font-size: 22px;">Kredit Habis!</h2>
+                        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 28px; line-height: 1.5;">${finalText}</p>
+                        <button class="btn" onclick="this.parentElement.parentElement.remove()" style="background: var(--accent); width: 100%; margin-bottom: 12px;"><i class="fa-solid fa-check"></i> Mengerti</button>
+                        <a href="${finalWA}" target="_blank" style="text-decoration: none;">
+                            <button class="btn btn-outline" style="width: 100%;"><i class="fa-brands fa-whatsapp"></i> Hubungi Admin</button>
+                        </a>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
             }
 
             // Polling Multiple Tasks
@@ -2175,6 +2234,12 @@
                                 localStorage.setItem('texa_user_plan', data.user.plan);
                                 localStorage.setItem('texa_user_credits', data.user.credits);
                                 
+                                if (data.user.mitra_whatsapp) localStorage.setItem('texa_user_mitra_whatsapp', data.user.mitra_whatsapp);
+                                else localStorage.removeItem('texa_user_mitra_whatsapp');
+                                
+                                if (data.user.mitra_popup_text) localStorage.setItem('texa_user_mitra_popup_text', data.user.mitra_popup_text);
+                                else localStorage.removeItem('texa_user_mitra_popup_text');
+                                
                                 // Live update the UI
                                 subtitle.innerHTML = `Welcome, ${data.user.name} • Powered by Kling <span class="pro-badge">${data.user.plan.toUpperCase()}</span> <span style="font-size:11px; margin-left:8px; color:var(--text-secondary);"><i class="fa-solid fa-coins"></i> ${data.user.credits} Credits</span>`;
                                 
@@ -2256,6 +2321,8 @@
                                     localStorage.setItem('texa_user_name', data.user.name);
                                     localStorage.setItem('texa_user_plan', data.user.plan);
                                     localStorage.setItem('texa_user_credits', data.user.credits);
+                                    if (data.user.mitra_whatsapp) localStorage.setItem('texa_user_mitra_whatsapp', data.user.mitra_whatsapp);
+                                    if (data.user.mitra_popup_text) localStorage.setItem('texa_user_mitra_popup_text', data.user.mitra_popup_text);
                                     window.location.reload();
                                 } else {
                                     err.textContent = data.error || 'Login gagal.';
