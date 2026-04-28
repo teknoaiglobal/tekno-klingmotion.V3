@@ -1,6 +1,8 @@
-import { db } from '../db.js';
+import { getDb, saveDb } from '../db.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  const db = await getDb();
+
   if (req.method === 'GET') {
     return res.status(200).json({ vouchers: db.vouchers });
   }
@@ -18,6 +20,7 @@ export default function handler(req, res) {
     };
     
     db.vouchers.push(newVoucher);
+    await saveDb();
     return res.status(200).json({ success: true, voucher: newVoucher });
   }
 

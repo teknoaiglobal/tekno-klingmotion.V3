@@ -1,6 +1,8 @@
-import { db } from './db.js';
+import { getDb } from './db.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  const db = await getDb();
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

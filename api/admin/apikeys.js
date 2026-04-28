@@ -1,6 +1,8 @@
-import { db } from '../db.js';
+import { getDb, saveDb } from '../db.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  const db = await getDb();
+
   if (req.method === 'GET') {
     return res.status(200).json({ apiKeys: db.apiKeys });
   }
@@ -19,6 +21,7 @@ export default function handler(req, res) {
     };
     
     db.apiKeys.push(newKey);
+    await saveDb();
     return res.status(200).json({ success: true, apiKey: newKey });
   }
 
@@ -37,6 +40,7 @@ export default function handler(req, res) {
       db.apiKeys[keyIndex].key_string = key_string;
     }
     
+    await saveDb();
     return res.status(200).json({ success: true, apiKey: db.apiKeys[keyIndex] });
   }
 
@@ -49,6 +53,7 @@ export default function handler(req, res) {
     }
     
     db.apiKeys.splice(keyIndex, 1);
+    await saveDb();
     return res.status(200).json({ success: true });
   }
 

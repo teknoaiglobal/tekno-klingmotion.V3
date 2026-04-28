@@ -41,7 +41,8 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: 'User ID is required to use server quota. Please login via Voucher.' });
             }
             
-            const { db } = await import('./db.js');
+            const { getDb, saveDb } = await import('./db.js');
+            const db = await getDb();
             const user = db.users.find(u => u.id === userId);
             
             if (!user) return res.status(404).json({ error: 'User not found' });
@@ -64,6 +65,7 @@ export default async function handler(req, res) {
             
             const selectedKey = activeKeys.reduce((prev, curr) => prev.usage_count < curr.usage_count ? prev : curr);
             user.credits -= 1;
+            await saveDb();
             
             apiKeyToUse = selectedKey.key_string;
             
@@ -71,7 +73,8 @@ export default async function handler(req, res) {
             res.setHeader('X-Used-Key-Hint', apiKeyToUse.substring(0, 8) + '***');
         } else if (useServerQuota && req.method === 'GET') {
              // For polling GET requests, find the key that was used to create this task
-             const { db } = await import('./db.js');
+             const { getDb } = await import('./db.js');
+             const db = await getDb();
              
              const taskId = path.split('/').pop();
              const task = db.tasks && db.tasks.find(t => t.taskId === taskId);
@@ -111,7 +114,8 @@ export default async function handler(req, res) {
                 try {
                 // If it's a retry, we must pick a new active key
                 if (attempt > 0 && useServerQuota) {
-                    const { db } = await import('./db.js');
+                    const { getDb } = await import('./db.js');
+                    const db = await getDb();
                     const activeKeys = db.apiKeys.filter(k => k.is_active);
                     if (activeKeys.length === 0) {
                         return res.status(500).json({ error: 'All server tokens have been exhausted or disabled.' });
@@ -134,17 +138,22 @@ export default async function handler(req, res) {
                 }
 
                 if (isDeadKey) {
-                    const { db } = await import('./db.js');
+                    const { getDb, saveDb } = await import('./db.js');
+                    const db = await getDb();
                     const badKey = db.apiKeys.find(k => k.key_string === apiKeyToUse);
                     if (badKey) badKey.is_active = false;
+                    await saveDb();
                     console.warn(`Auto-disabled token ${apiKeyToUse.substring(0,8)}*** due to error response`);
                     attempt++;
                 } else {
                     success = true;
-                    if (useServerQuota && response.ok) {
-                        const { db } = await import('./db.js');
+                    // Only increment usage on successful POST (Task Creation)
+                    if (useServerQuota && response.ok && req.method === 'POST') {
+                        const { getDb, saveDb } = await import('./db.js');
+                        const db = await getDb();
                         const usedKey = db.apiKeys.find(k => k.key_string === apiKeyToUse);
                         if (usedKey) usedKey.usage_count += 1;
+                        await saveDb();
                     }
                 }
             } catch(e) {
@@ -156,10 +165,12 @@ export default async function handler(req, res) {
             // Refund if totally failed to create task
             const userId = req.headers['x-texa-user-id'];
             if (req.method === 'POST' && useServerQuota && userId && (!response || !response.ok)) {
-                 const { db } = await import('./db.js');
+                 const { getDb, saveDb } = await import('./db.js');
+                 const db = await getDb();
                  const user = db.users.find(u => u.id === userId);
                  if (user) {
                      user.credits += 1; // Refund
+                     await saveDb();
                  }
             }
             if (response.ok && req.method === 'POST' && path.includes('/v1/ai/video') && useServerQuota && userId) {
@@ -167,9 +178,11 @@ export default async function handler(req, res) {
                     const jsonData = JSON.parse(data);
                     const taskId = jsonData.data?.task_id || jsonData.task_id;
                     if (taskId) {
-                        const { db } = await import('./db.js');
+                        const { getDb, saveDb } = await import('./db.js');
+                        const db = await getDb();
                         db.tasks = db.tasks || [];
                         db.tasks.push({ taskId, userId, status: 'PENDING', apiKey: apiKeyToUse });
+                        await saveDb();
                         console.log(`[PROXY] Saved task ${taskId} with key ${apiKeyToUse.substring(0,8)}`);
                     }
                 } catch(e) {}

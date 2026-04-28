@@ -1,6 +1,8 @@
-import { db } from './db.js';
+import { getDb, saveDb } from './db.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  const db = await getDb();
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -38,5 +40,6 @@ export default function handler(req, res) {
   };
   
   db.users.push(newUser);
+  await saveDb();
   return res.status(200).json({ success: true, user: newUser });
 }

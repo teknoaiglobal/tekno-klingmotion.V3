@@ -221,6 +221,54 @@
     <div id="toast">Berhasil disimpan!</div>
 
     <script>
+        const ADMIN_PASSWORD = 'Tekno@Project03'; // Default password
+        
+        function requireAdminLogin() {
+            if (localStorage.getItem('texa_admin_auth') === 'true') return;
+
+            document.body.style.overflow = 'hidden';
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.98)';
+            overlay.style.backdropFilter = 'blur(10px)';
+            overlay.style.zIndex = '999999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.innerHTML = `
+                <div style="background: var(--bg-card); padding: 32px; border-radius: 16px; border: 1px solid var(--border); width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                    <i class="fa-solid fa-lock" style="font-size: 32px; color: var(--accent); margin-bottom: 16px;"></i>
+                    <h2 style="margin: 0 0 8px 0; font-size: 20px;">Restricted Access</h2>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px;">Admin TEKNO Authentication Required.</p>
+                    <input type="password" id="adminPass" placeholder="Masukkan Password Admin" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; outline: none; box-sizing: border-box;">
+                    <button id="adminLoginBtn" class="btn" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-right-to-bracket"></i> Masuk Panel</button>
+                    <div id="adminError" style="color: var(--danger); font-size: 12px; margin-top: 12px; display: none;">Password salah! Akses ditolak.</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            document.getElementById('adminLoginBtn').addEventListener('click', () => {
+                const pass = document.getElementById('adminPass').value;
+                if (pass === ADMIN_PASSWORD) {
+                    localStorage.setItem('texa_admin_auth', 'true');
+                    document.body.style.overflow = '';
+                    overlay.remove();
+                } else {
+                    document.getElementById('adminError').style.display = 'block';
+                }
+            });
+            
+            document.getElementById('adminPass').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') document.getElementById('adminLoginBtn').click();
+            });
+        }
+        
+        requireAdminLogin();
+
         const els = {
             apiUrl: document.getElementById('cloudinaryApiUrl'),
             cloudName: document.getElementById('cloudName'),

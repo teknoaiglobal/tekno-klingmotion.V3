@@ -1,6 +1,8 @@
-import { db } from '../db.js';
+import { getDb, saveDb } from '../db.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  const db = await getDb();
+
   if (req.method === 'GET') {
     return res.status(200).json({ users: db.users });
   }
@@ -29,6 +31,7 @@ export default function handler(req, res) {
       db.users[userIndex].subscription_end_date = new Date(Date.now() + duration_days * 24 * 60 * 60 * 1000).toISOString();
     }
     
+    await saveDb();
     return res.status(200).json({ success: true, user: db.users[userIndex] });
   }
 
@@ -39,6 +42,7 @@ export default function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
     db.users.splice(userIndex, 1);
+    await saveDb();
     return res.status(200).json({ success: true });
   }
 
@@ -53,6 +57,7 @@ export default function handler(req, res) {
       subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     };
     db.users.push(newUser);
+    await saveDb();
     return res.status(200).json({ success: true, user: newUser });
   }
 

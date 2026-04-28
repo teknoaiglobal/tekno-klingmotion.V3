@@ -1,6 +1,4 @@
-// Mockup Database for Vercel Dev
-// Note: In production Vercel (serverless), this state will be reset on cold boots.
-// We use global to persist state across hot reloads in dev mode.
+const FIREBASE_URL = 'https://tekno-335f8-default-rtdb.asia-southeast1.firebasedatabase.app/db.json';
 
 const initialDb = {
   users: [
@@ -11,14 +9,6 @@ const initialDb = {
       plan: 'vip',
       credits: 9999,
       subscription_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: 'user1',
-      name: 'Test Member',
-      role: 'member',
-      plan: 'free',
-      credits: 10,
-      subscription_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     }
   ],
   vouchers: [],
@@ -30,8 +20,43 @@ const initialDb = {
   tasks: []
 };
 
-if (!global.mockDb) {
-  global.mockDb = initialDb;
+// We use global to persist state across hot reloads in dev mode,
+// but for serverless we want to fetch from Firebase every time.
+let dbCache = null;
+
+export async function getDb() {
+  try {
+    const res = await fetch(FIREBASE_URL);
+    const data = await res.json();
+    if (data) {
+      dbCache = {
+        users: data.users || [],
+        vouchers: data.vouchers || [],
+        apiKeys: data.apiKeys || [],
+        tasks: data.tasks || []
+      };
+      return dbCache;
+    }
+  } catch (e) {
+    console.error('Failed to fetch DB from Firebase:', e);
+  }
+  
+  if (!dbCache) {
+    dbCache = initialDb;
+    await saveDb();
+  }
+  return dbCache;
 }
 
-export const db = global.mockDb;
+export async function saveDb() {
+  if (!dbCache) return;
+  try {
+    await fetch(FIREBASE_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dbCache)
+    });
+  } catch (e) {
+    console.error('Failed to save DB to Firebase:', e);
+  }
+}
