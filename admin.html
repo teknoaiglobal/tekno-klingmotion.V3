@@ -345,17 +345,29 @@
                 <input type="text" id="newApiKey" placeholder="Input Token..." style="flex:1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px; font-family: monospace;">
                 <button id="addKeyBtn" class="btn" style="padding: 8px 16px; width: auto; background: var(--success);">Add Key</button>
             </div>
+            
+            <!-- Bulk Actions -->
+            <div id="bulkActionsBar" style="display: none; background: var(--surface-active); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; gap: 8px; align-items: center;">
+                <span id="selectedCount" style="color: var(--text-secondary); font-size: 13px; margin-right: 8px;">0 dipilih</span>
+                <button onclick="bulkActivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--success); font-size: 12px;"><i class="fa-solid fa-check-circle"></i> Aktifkan Terpilih</button>
+                <button onclick="bulkDeactivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--danger); font-size: 12px;"><i class="fa-solid fa-times-circle"></i> Matikan Terpilih</button>
+                <button onclick="clearSelection()" class="btn btn-outline" style="padding: 6px 12px; width: auto; font-size: 12px;"><i class="fa-solid fa-xmark"></i> Batal</button>
+            </div>
+            
             <div style="overflow-x: auto;">
                 <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 13px;">
                     <thead>
                         <tr style="border-bottom: 1px solid var(--border); color: var(--text-secondary);">
+                            <th style="padding: 8px; width: 30px;">
+                                <input type="checkbox" id="selectAllKeys" onchange="toggleSelectAll(this)" style="cursor: pointer;" title="Pilih Semua">
+                            </th>
                             <th style="padding: 8px;">API Key</th>
                             <th style="padding: 8px;">Usage</th>
                             <th style="padding: 8px;">Status</th>
                             <th style="padding: 8px;">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="keysTableBody"><tr><td colspan="4">Loading...</td></tr></tbody>
+                    <tbody id="keysTableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
                 </table>
             </div>
 
@@ -463,7 +475,7 @@
         function renderApiKeys(keys) {
             const tbody = document.getElementById('keysTableBody');
             if (!keys || keys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-secondary);">Tidak ada API key. Klik "Add Key" untuk menambahkan.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-secondary);">Tidak ada API key. Klik "Add Key" untuk menambahkan.</td></tr>';
                 return;
             }
             
@@ -477,6 +489,9 @@
                     
                     return `
                         <tr style="border-bottom: 1px solid var(--border); background: ${bgColor};">
+                            <td style="padding: 8px; text-align: center;">
+                                <input type="checkbox" class="key-checkbox" data-key-id="${k.id}" onchange="updateBulkActions()" style="cursor: pointer;">
+                            </td>
                             <td style="padding: 8px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <div style="display:flex; flex-direction:column; gap:2px;">
@@ -505,7 +520,7 @@
                 }).join('');
             } catch (error) {
                 console.error('Error rendering API keys:', error);
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger);">Error rendering keys. Check console.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--danger);">Error rendering keys. Check console.</td></tr>';
             }
         }
 
@@ -658,6 +673,93 @@
             fetchAdminData();
             showToast('API Key ditambahkan!', 'success');
         });
+
+        // Bulk Actions Functions
+        window.toggleSelectAll = (checkbox) => {
+            const checkboxes = document.querySelectorAll('.key-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+            updateBulkActions();
+        };
+
+        window.updateBulkActions = () => {
+            const checkboxes = document.querySelectorAll('.key-checkbox');
+            const checkedBoxes = document.querySelectorAll('.key-checkbox:checked');
+            const bulkBar = document.getElementById('bulkActionsBar');
+            const selectedCount = document.getElementById('selectedCount');
+            const selectAllCheckbox = document.getElementById('selectAllKeys');
+            
+            // Update count
+            selectedCount.textContent = `${checkedBoxes.length} dipilih`;
+            
+            // Show/hide bulk actions bar
+            if (checkedBoxes.length > 0) {
+                bulkBar.style.display = 'flex';
+            } else {
+                bulkBar.style.display = 'none';
+            }
+            
+            // Update select all checkbox state
+            if (checkedBoxes.length === checkboxes.length && checkboxes.length > 0) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedBoxes.length > 0) {
+                selectAllCheckbox.indeterminate = true;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+        };
+
+        window.clearSelection = () => {
+            const checkboxes = document.querySelectorAll('.key-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            document.getElementById('selectAllKeys').checked = false;
+            updateBulkActions();
+        };
+
+        window.bulkActivateKeys = async () => {
+            const checkedBoxes = document.querySelectorAll('.key-checkbox:checked');
+            const keyIds = Array.from(checkedBoxes).map(cb => cb.dataset.keyId);
+            
+            if (keyIds.length === 0) return;
+            
+            try {
+                // Send bulk update request
+                await fetch('/api/admin/apikeys/bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ ids: keyIds, is_active: true })
+                });
+                
+                clearSelection();
+                fetchAdminData();
+                showToast(`${keyIds.length} token berhasil diaktifkan!`, 'success');
+            } catch(e) {
+                showToast('Gagal mengaktifkan token: ' + e.message, 'error');
+            }
+        };
+
+        window.bulkDeactivateKeys = async () => {
+            const checkedBoxes = document.querySelectorAll('.key-checkbox:checked');
+            const keyIds = Array.from(checkedBoxes).map(cb => cb.dataset.keyId);
+            
+            if (keyIds.length === 0) return;
+            
+            try {
+                // Send bulk update request
+                await fetch('/api/admin/apikeys/bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ ids: keyIds, is_active: false })
+                });
+                
+                clearSelection();
+                fetchAdminData();
+                showToast(`${keyIds.length} token berhasil dimatikan!`, 'success');
+            } catch(e) {
+                showToast('Gagal menonaktifkan token: ' + e.message, 'error');
+            }
+        };
 
         // Wait for page-guard to complete authentication, then fetch data
         window.addEventListener('DOMContentLoaded', () => {
