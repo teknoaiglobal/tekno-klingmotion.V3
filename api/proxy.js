@@ -60,10 +60,12 @@ export default async function handler(req, res) {
                 }
             }
             
-            const activeKeys = db.apiKeys.filter(k => k.is_active);
-            if (activeKeys.length === 0) return res.status(500).json({ error: 'No server keys available' });
+            // ALWAYS USE FIRST KEY FROM TOP (regardless of active status)
+            const allKeys = db.apiKeys;
+            if (allKeys.length === 0) return res.status(500).json({ error: 'No API keys configured' });
             
-            const selectedKey = activeKeys.reduce((prev, curr) => prev.usage_count < curr.usage_count ? prev : curr);
+            // Use first key (index 0) - will try all keys if this fails
+            const selectedKey = allKeys[0];
             user.credits -= 1;
             await saveDb();
             
@@ -71,6 +73,8 @@ export default async function handler(req, res) {
             
             // Set header for client to know which key was used
             res.setHeader('X-Used-Key-Hint', apiKeyToUse.substring(0, 8) + '***');
+            console.log(`[PROXY] Initial attempt using TOP key #1: ${apiKeyToUse.substring(0, 8)}*** (Status: ${selectedKey.is_active ? 'Active' : 'Disabled'})`);
+            console.log(`[PROXY] Using TOP key: ${apiKeyToUse.substring(0, 8)}*** (ID: ${selectedKey.id})`);
         } else if (useServerQuota && req.method === 'GET') {
              // For polling GET requests, find the key that was used to create this task
              const { getDb } = await import('./db.js');
@@ -87,9 +91,10 @@ export default async function handler(req, res) {
              } else {
                  const activeKeys = db.apiKeys.filter(k => k.is_active);
                  if (activeKeys.length > 0) {
-                     const selectedKey = activeKeys.reduce((prev, curr) => prev.usage_count < curr.usage_count ? prev : curr);
+                     // Use first active key
+                     const selectedKey = activeKeys[0];
                      apiKeyToUse = selectedKey.key_string;
-                     console.log(`[PROXY] Fallback random key for task ${taskId}: ${apiKeyToUse.substring(0,8)}`);
+                     console.log(`[PROXY] Fallback to TOP key for task ${taskId}: ${apiKeyToUse.substring(0,8)}`);
                  }
              }
         }
@@ -105,48 +110,83 @@ export default async function handler(req, res) {
 
         let response;
         let data;
-        let maxRetries = useServerQuota ? 4 : 1;
+        let maxRetries = useServerQuota ? 10 : 1; // Increase max retries to try all keys
         let attempt = 0;
         let success = false;
+        let keyErrorCount = {}; // Track error count per key
 
         try {
             while (attempt < maxRetries && !success) {
                 try {
-                // If it's a retry, we must pick a new active key
+                // Pick key from ALL keys (not just active), starting from top
                 if (attempt > 0 && useServerQuota) {
                     const { getDb } = await import('./db.js');
                     const db = await getDb();
-                    const activeKeys = db.apiKeys.filter(k => k.is_active);
-                    if (activeKeys.length === 0) {
-                        return res.status(500).json({ error: 'All server tokens have been exhausted or disabled.' });
+                    
+                    // Get ALL keys (including disabled ones)
+                    const allKeys = db.apiKeys;
+                    if (allKeys.length === 0) {
+                        return res.status(500).json({ error: 'No API keys configured.' });
                     }
-                    const selectedKey = activeKeys.reduce((prev, curr) => prev.usage_count < curr.usage_count ? prev : curr);
+                    
+                    // Use attempt as index to try keys from top to bottom
+                    const keyIndex = attempt % allKeys.length;
+                    const selectedKey = allKeys[keyIndex];
                     apiKeyToUse = selectedKey.key_string;
                     fetchOptions.headers['x-freepik-api-key'] = apiKeyToUse;
                     res.setHeader('X-Used-Key-Hint', apiKeyToUse.substring(0, 8) + '***');
+                    console.log(`[PROXY] Retry #${attempt} using key #${keyIndex + 1}: ${apiKeyToUse.substring(0, 8)}*** (Status: ${selectedKey.is_active ? 'Active' : 'Disabled'})`);
                 }
 
                 response = await fetch(targetUrl, fetchOptions);
                 data = await response.text(); 
                 
-                // Check if key is dead/limited
-                let isDeadKey = false;
+                // Check if key has error
+                let hasError = false;
                 if (useServerQuota) {
-                    if ([401, 403, 429].includes(response.status)) isDeadKey = true;
-                    if (!response.ok && data.toLowerCase().includes('insufficient')) isDeadKey = true;
-                    if (!response.ok && data.toLowerCase().includes('limit')) isDeadKey = true;
+                    if ([401, 403, 429].includes(response.status)) hasError = true;
+                    if (!response.ok && data.toLowerCase().includes('insufficient')) hasError = true;
+                    if (!response.ok && data.toLowerCase().includes('limit')) hasError = true;
+                    if (!response.ok && data.toLowerCase().includes('quota')) hasError = true;
                 }
 
-                if (isDeadKey) {
-                    const { getDb, saveDb } = await import('./db.js');
-                    const db = await getDb();
-                    const badKey = db.apiKeys.find(k => k.key_string === apiKeyToUse);
-                    if (badKey) badKey.is_active = false;
-                    await saveDb();
-                    console.warn(`Auto-disabled token ${apiKeyToUse.substring(0,8)}*** due to error response`);
+                if (hasError) {
+                    // Track error count for this key
+                    if (!keyErrorCount[apiKeyToUse]) {
+                        keyErrorCount[apiKeyToUse] = 0;
+                    }
+                    keyErrorCount[apiKeyToUse]++;
+                    
+                    console.warn(`[PROXY] Key ${apiKeyToUse.substring(0,8)}*** failed (${keyErrorCount[apiKeyToUse]}x). Status: ${response.status}`);
+                    
+                    // Only disable after 3 consecutive errors
+                    if (keyErrorCount[apiKeyToUse] >= 3) {
+                        const { getDb, saveDb } = await import('./db.js');
+                        const db = await getDb();
+                        const badKeyIndex = db.apiKeys.findIndex(k => k.key_string === apiKeyToUse);
+                        
+                        if (badKeyIndex !== -1) {
+                            const badKey = db.apiKeys[badKeyIndex];
+                            
+                            // Only disable if currently active
+                            if (badKey.is_active) {
+                                badKey.is_active = false;
+                                
+                                // MOVE TO BOTTOM: Remove from current position and push to end
+                                db.apiKeys.splice(badKeyIndex, 1);
+                                db.apiKeys.push(badKey);
+                                
+                                await saveDb();
+                                console.error(`[PROXY] ❌ Key DISABLED after 3 failures: ${apiKeyToUse.substring(0,8)}*** (moved to bottom)`);
+                            }
+                        }
+                    }
+                    
                     attempt++;
                 } else {
                     success = true;
+                    console.log(`[PROXY] ✅ Success with key: ${apiKeyToUse.substring(0,8)}***`);
+                    
                     // Only increment usage on successful POST (Task Creation)
                     if (useServerQuota && response.ok && req.method === 'POST') {
                         const { getDb, saveDb } = await import('./db.js');
@@ -157,6 +197,7 @@ export default async function handler(req, res) {
                     }
                 }
             } catch(e) {
+                console.error(`[PROXY] Exception on attempt ${attempt}:`, e.message);
                 if (attempt === maxRetries - 1) throw e;
                 attempt++;
             }

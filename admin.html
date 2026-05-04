@@ -4,10 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="required-role" content="admin">
     <title>Cloudinary Admin - TEXA</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/js/auth-client.js"></script>
+    <script src="/js/page-guard.js"></script>
     <style>
+        body {
+            visibility: hidden;
+        }
         :root {
             --bg-color: #0f1115;
             --surface: rgba(255, 255, 255, 0.03);
@@ -221,54 +227,8 @@
     <div id="toast">Berhasil disimpan!</div>
 
     <script>
-        const ADMIN_PASSWORD = 'Tekno@Project03'; // Default password
+        // Authentication handled by page-guard.js
         
-        function requireAdminLogin() {
-            if (localStorage.getItem('texa_admin_auth') === 'true') return;
-
-            document.body.style.overflow = 'hidden';
-            const overlay = document.createElement('div');
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100vw';
-            overlay.style.height = '100vh';
-            overlay.style.background = 'rgba(15, 23, 42, 0.98)';
-            overlay.style.backdropFilter = 'blur(10px)';
-            overlay.style.zIndex = '999999';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.innerHTML = `
-                <div style="background: var(--bg-card); padding: 32px; border-radius: 16px; border: 1px solid var(--border); width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-                    <i class="fa-solid fa-lock" style="font-size: 32px; color: var(--accent); margin-bottom: 16px;"></i>
-                    <h2 style="margin: 0 0 8px 0; font-size: 20px;">Restricted Access</h2>
-                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px;">Admin TEKNO Authentication Required.</p>
-                    <input type="password" id="adminPass" placeholder="Masukkan Password Admin" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; margin-bottom: 16px; outline: none; box-sizing: border-box;">
-                    <button id="adminLoginBtn" class="btn" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-right-to-bracket"></i> Masuk Panel</button>
-                    <div id="adminError" style="color: var(--danger); font-size: 12px; margin-top: 12px; display: none;">Password salah! Akses ditolak.</div>
-                </div>
-            `;
-            document.body.appendChild(overlay);
-
-            document.getElementById('adminLoginBtn').addEventListener('click', () => {
-                const pass = document.getElementById('adminPass').value;
-                if (pass === ADMIN_PASSWORD) {
-                    localStorage.setItem('texa_admin_auth', 'true');
-                    document.body.style.overflow = '';
-                    overlay.remove();
-                } else {
-                    document.getElementById('adminError').style.display = 'block';
-                }
-            });
-            
-            document.getElementById('adminPass').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') document.getElementById('adminLoginBtn').click();
-            });
-        }
-        
-        requireAdminLogin();
-
         const els = {
             apiUrl: document.getElementById('cloudinaryApiUrl'),
             cloudName: document.getElementById('cloudName'),
@@ -423,13 +383,27 @@
 
         // API Fetching
         async function fetchAdminData() {
+            console.log('[ADMIN] Fetching admin data...');
             try {
                 const [uRes, kRes, sRes] = await Promise.all([
                     fetch('/api/admin/users'), fetch('/api/admin/apikeys'), fetch('/api/admin/settings')
                 ]);
+                
+                console.log('[ADMIN] Response status:', {
+                    users: uRes.status,
+                    apikeys: kRes.status,
+                    settings: sRes.status
+                });
+                
                 const uData = await uRes.json();
                 const kData = await kRes.json();
                 const sData = await sRes.json();
+
+                console.log('[ADMIN] Data received:', {
+                    users: uData.users?.length || 0,
+                    apiKeys: kData.apiKeys?.length || 0,
+                    settings: !!sData.settings
+                });
 
                 renderUsers(uData.users || []);
                 renderApiKeys(kData.apiKeys || []);
@@ -438,7 +412,7 @@
                     document.getElementById('adminPopupText').value = sData.settings.popupText || '';
                 }
             } catch (e) {
-                console.error("Gagal load data admin, pastikan server Vercel menyala.", e);
+                console.error("[ADMIN] Gagal load data admin:", e);
             }
         }
 
@@ -488,22 +462,51 @@
 
         function renderApiKeys(keys) {
             const tbody = document.getElementById('keysTableBody');
-            tbody.innerHTML = keys.map(k => `
-                <tr style="border-bottom: 1px solid var(--border); background: ${k.is_active ? 'transparent' : 'rgba(239, 68, 68, 0.1)'};">
-                    <td style="padding: 8px;">
-                        <input id="key_${k.id}" type="text" value="${k.key_string}" style="background: rgba(0,0,0,0.3); border: 1px solid ${k.is_active ? 'var(--border)' : 'var(--danger)'}; color: white; padding: 4px; border-radius: 4px; font-family: monospace; width: 200px;">
-                    </td>
-                    <td style="padding: 8px;">${k.usage_count}</td>
-                    <td style="padding: 8px; color: ${k.is_active ? 'var(--success)' : 'var(--danger)'}; font-weight: bold;">${k.is_active ? 'Active' : 'Mati / Limit'}</td>
-                    <td style="padding: 8px;">
-                        <div style="display:flex; gap:4px;">
-                            <button onclick="saveApiKey('${k.id}')" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin: 0; width: auto;"><i class="fa-solid fa-floppy-disk"></i></button>
-                            <button onclick="toggleApiKey('${k.id}', ${k.is_active})" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; margin: 0; width: auto;"><i class="fa-solid fa-power-off"></i></button>
-                            <button onclick="deleteApiKey('${k.id}', this)" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: var(--danger); border-color: var(--danger); margin: 0; width: auto; transition: 0.2s;"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            if (!keys || keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-secondary);">Tidak ada API key. Klik "Add Key" untuk menambahkan.</td></tr>';
+                return;
+            }
+            
+            try {
+                tbody.innerHTML = keys.map((k, index) => {
+                    const isActive = k.is_active;
+                    const bgColor = isActive ? 'transparent' : 'rgba(239, 68, 68, 0.1)';
+                    const borderColor = isActive ? 'var(--border)' : 'var(--danger)';
+                    const statusColor = isActive ? 'var(--success)' : 'var(--danger)';
+                    const statusText = isActive ? 'Active' : 'Mati / Limit';
+                    
+                    return `
+                        <tr style="border-bottom: 1px solid var(--border); background: ${bgColor};">
+                            <td style="padding: 8px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <button onclick="moveKeyUp('${k.id}')" ${index === 0 ? 'disabled' : ''} class="btn btn-outline" style="padding: 2px 6px; font-size: 10px; margin: 0; width: auto;" title="Move Up"><i class="fa-solid fa-arrow-up"></i></button>
+                                        <button onclick="moveKeyDown('${k.id}')" ${index === keys.length - 1 ? 'disabled' : ''} class="btn btn-outline" style="padding: 2px 6px; font-size: 10px; margin: 0; width: auto;" title="Move Down"><i class="fa-solid fa-arrow-down"></i></button>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div style="display:flex; align-items:center; gap:4px; margin-bottom:4px;">
+                                            <span style="font-size:11px; color:var(--text-secondary); font-weight:bold;">#${index + 1}</span>
+                                            <input id="key_${k.id}" type="text" value="${k.key_string}" style="background: rgba(0,0,0,0.3); border: 1px solid ${borderColor}; color: white; padding: 4px; border-radius: 4px; font-family: monospace; width: 100%; font-size:11px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding: 8px;">${k.usage_count || 0}</td>
+                            <td style="padding: 8px; color: ${statusColor}; font-weight: bold;">${statusText}</td>
+                            <td style="padding: 8px;">
+                                <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                    <button onclick="saveApiKey('${k.id}')" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin: 0; width: auto;"><i class="fa-solid fa-floppy-disk"></i></button>
+                                    <button onclick="toggleApiKey('${k.id}', ${isActive})" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; margin: 0; width: auto;"><i class="fa-solid fa-power-off"></i></button>
+                                    <button onclick="deleteApiKey('${k.id}', this)" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: var(--danger); border-color: var(--danger); margin: 0; width: auto; transition: 0.2s;"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error rendering API keys:', error);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--danger);">Error rendering keys. Check console.</td></tr>';
+            }
         }
 
         // Actions
@@ -616,7 +619,35 @@
             showToast('Token dihapus!', 'success');
         };
 
+        // Move API Key Up (higher priority)
+        window.moveKeyUp = async (id) => {
+            try {
+                await fetch('/api/admin/apikeys/reorder', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ id, direction: 'up' })
+                });
+                fetchAdminData();
+                showToast('Token dipindah ke atas!', 'success');
+            } catch(e) {
+                showToast('Gagal memindahkan token', 'error');
+            }
+        };
 
+        // Move API Key Down (lower priority)
+        window.moveKeyDown = async (id) => {
+            try {
+                await fetch('/api/admin/apikeys/reorder', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ id, direction: 'down' })
+                });
+                fetchAdminData();
+                showToast('Token dipindah ke bawah!', 'success');
+            } catch(e) {
+                showToast('Gagal memindahkan token', 'error');
+            }
+        };
 
         document.getElementById('addKeyBtn').addEventListener('click', async () => {
             const keyInput = document.getElementById('newApiKey');
@@ -628,7 +659,13 @@
             showToast('API Key ditambahkan!', 'success');
         });
 
-        fetchAdminData();
+        // Wait for page-guard to complete authentication, then fetch data
+        window.addEventListener('DOMContentLoaded', () => {
+            // Small delay to ensure page-guard has completed
+            setTimeout(() => {
+                fetchAdminData();
+            }, 500);
+        });
     </script>
 </body>
 

@@ -1,6 +1,21 @@
 import { getDb, saveDb } from '../db.js';
 
+// Verify authentication
+function verifyAuth(req) {
+  const token = req.headers['x-auth-token'];
+  if (!token) {
+    return { valid: false, error: 'Authentication required' };
+  }
+  return { valid: true };
+}
+
 export default async function handler(req, res) {
+  // Check authentication
+  const auth = verifyAuth(req);
+  if (!auth.valid) {
+    return res.status(401).json({ error: auth.error });
+  }
+
   const db = await getDb();
 
   if (req.method === 'GET') {

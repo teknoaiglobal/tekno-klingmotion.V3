@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="required-role" content="mitra">
     <title>Mitra Dashboard - TEKNO KLING MOTION</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <script src="/js/auth-client.js"></script>
+    <script src="/js/page-guard.js"></script>
     <style>
         body {
+            visibility: hidden;
             background-color: var(--bg-color);
             color: var(--text-primary);
             font-family: 'Inter', sans-serif;
@@ -121,49 +125,7 @@
     <div id="toast">Berhasil disimpan!</div>
 
     <script>
-        const MITRA_PASSWORD = 'mitra'; // Default password untuk Mitra
-
-        function requireMitraLogin() {
-            if (localStorage.getItem('texa_mitra_auth') === 'true') return;
-
-            document.body.style.overflow = 'hidden';
-            const overlay = document.createElement('div');
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100vw';
-            overlay.style.height = '100vh';
-            overlay.style.background = 'rgba(15, 23, 42, 0.98)';
-            overlay.style.backdropFilter = 'blur(10px)';
-            overlay.style.zIndex = '999999';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.innerHTML = `
-                <div style="background: var(--bg-card); padding: 32px; border-radius: 16px; border: 1px solid var(--border); width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-                    <i class="fa-solid fa-handshake" style="font-size: 32px; color: var(--accent); margin-bottom: 16px;"></i>
-                    <h2 style="margin: 0 0 8px 0; font-size: 20px;">Mitra Access</h2>
-                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 24px;">Masukkan Sandi Mitra untuk mengelola member Anda.</p>
-                    <input type="password" id="mitraPass" placeholder="Password" style="margin-bottom: 16px;">
-                    <button id="mitraLoginBtn" class="btn" style="width: 100%; background: var(--accent);"><i class="fa-solid fa-right-to-bracket"></i> Masuk Dashboard</button>
-                    <div id="mitraError" style="color: var(--danger); font-size: 12px; margin-top: 12px; display: none;">Password salah!</div>
-                </div>
-            `;
-            document.body.appendChild(overlay);
-
-            document.getElementById('mitraLoginBtn').addEventListener('click', () => {
-                if (document.getElementById('mitraPass').value === MITRA_PASSWORD) {
-                    localStorage.setItem('texa_mitra_auth', 'true');
-                    document.body.style.overflow = 'auto';
-                    overlay.remove();
-                } else {
-                    const err = document.getElementById('mitraError');
-                    err.style.display = 'block';
-                    setTimeout(() => err.style.display = 'none', 2000);
-                }
-            });
-        }
-        requireMitraLogin();
+        // Authentication handled by page-guard.js
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
@@ -275,7 +237,12 @@
             showToast('Member dihapus', 'success');
         };
 
-        fetchMitraData();
+        // Wait for page-guard to complete authentication, then fetch data
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                fetchMitraData();
+            }, 500);
+        });
     </script>
 </body>
 </html>

@@ -12,6 +12,37 @@ app.use(express.json());
 // Serve static files
 app.use(express.static(__dirname));
 
+// Auth routes
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const handler = await import('./api/auth.js');
+        await handler.default(req, res);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.post('/api/auth/verify', async (req, res) => {
+    try {
+        const handler = await import('./api/auth.js');
+        await handler.default(req, res);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+    try {
+        const handler = await import('./api/auth.js');
+        await handler.default(req, res);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 // Map /proxy.php to api/proxy.js based on vercel.json rewrite
 app.all('/proxy.php', async (req, res) => {
     try {
@@ -26,19 +57,24 @@ app.all('/proxy.php', async (req, res) => {
 // Dynamic API routes handler
 app.use('/api', async (req, res) => {
     try {
+        // Remove trailing slash from path
+        let apiPath = req.path.replace(/\/$/, '');
+        
         // Find the matching JS file
-        const apiPath = req.path;
         let filePath = path.join(__dirname, 'api', `${apiPath}.js`);
+        
+        console.log(`[SERVER] API request: ${req.method} ${req.path} -> ${apiPath}.js`);
         
         if (fs.existsSync(filePath)) {
             // Found exact match
             const handler = await import(`file://${filePath}?t=${Date.now()}`);
             await handler.default(req, res);
         } else {
-            res.status(404).json({ error: 'Not Found' });
+            console.log(`[SERVER] File not found: ${filePath}`);
+            res.status(404).json({ error: 'Not Found', path: apiPath });
         }
     } catch (e) {
-        console.error(e);
+        console.error('[SERVER] Error:', e);
         res.status(500).json({ error: e.message });
     }
 });
