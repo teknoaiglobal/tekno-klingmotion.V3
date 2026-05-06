@@ -24,8 +24,14 @@ async function hashPassword(password) {
 }
 
 export default async function handler(req, res) {
+  const url = req.url || '';
+  const action = req.query?.action || '';
+  const isLogin = url.includes('login') || action === 'login';
+  const isVerify = url.includes('verify') || action === 'verify';
+  const isLogout = url.includes('logout') || action === 'logout';
+
   // Login endpoint
-  if (req.method === 'POST' && req.url === '/api/auth/login') {
+  if (req.method === 'POST' && isLogin) {
     const { password, role } = req.body;
     
     if (!password || !role) {
@@ -61,7 +67,7 @@ export default async function handler(req, res) {
   }
 
   // Verify endpoint
-  if (req.method === 'POST' && req.url === '/api/auth/verify') {
+  if (req.method === 'POST' && isVerify) {
     const { token } = req.body;
     
     if (!token) {
@@ -77,7 +83,7 @@ export default async function handler(req, res) {
   }
 
   // Logout endpoint
-  if (req.method === 'POST' && req.url === '/api/auth/logout') {
+  if (req.method === 'POST' && isLogout) {
     const { token } = req.body;
     if (token) {
       sessions.delete(token);
