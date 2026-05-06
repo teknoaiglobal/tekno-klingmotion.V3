@@ -55,6 +55,19 @@ export async function getDb() {
 
 export async function saveDb() {
   if (!dbCache) return;
+
+  // Auto-sort API keys: Active first, then by usage_count ascending (least used first)
+  if (dbCache.apiKeys && Array.isArray(dbCache.apiKeys)) {
+    dbCache.apiKeys.sort((a, b) => {
+      // Prioritize active keys over disabled ones
+      if (a.is_active !== b.is_active) {
+        return a.is_active ? -1 : 1; 
+      }
+      // Then sort by lowest usage count
+      return (a.usage_count || 0) - (b.usage_count || 0);
+    });
+  }
+
   try {
     await fetch(FIREBASE_URL, {
       method: 'PUT',
