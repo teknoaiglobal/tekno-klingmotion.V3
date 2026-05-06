@@ -25,7 +25,10 @@ export default async function handler(req, res) {
             method: req.method,
             headers: {
                 'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Origin': 'https://www.freepik.com',
+                'Referer': 'https://www.freepik.com/'
             }
         };
 
