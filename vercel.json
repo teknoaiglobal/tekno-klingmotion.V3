@@ -2,6 +2,16 @@
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm install",
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
   "crons": [
     {
       "path": "/api/admin/apikeys/cleanup",
@@ -11,11 +21,15 @@
   "rewrites": [
     {
       "source": "/proxy.php",
-      "destination": "/api/proxy"
+      "destination": "/api/proxy.js"
     },
     {
       "source": "/api/auth/:action",
-      "destination": "/api/auth"
+      "destination": "/api/auth.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ]
 }
