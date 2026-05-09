@@ -174,6 +174,7 @@ export default async function handler(req, res) {
                             // Only disable if currently active
                             if (badKey.is_active) {
                                 badKey.is_active = false;
+                                badKey.inactive_since = new Date().toISOString();
                                 
                                 // MOVE TO BOTTOM: Remove from current position and push to end
                                 db.apiKeys.splice(badKeyIndex, 1);

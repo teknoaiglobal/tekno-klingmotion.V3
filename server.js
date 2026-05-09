@@ -82,4 +82,27 @@ app.use('/api', async (req, res) => {
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Local dev server running at http://localhost:${PORT}`);
+    
+    // Simulate Cron Job Locally (runs every 1 hour)
+    setInterval(async () => {
+        try {
+            console.log('[LOCAL CRON] Triggering API Key Cleanup...');
+            // Since it's local, we bypass network fetch and import handler directly
+            const handler = await import('./api/admin/apikeys/cleanup.js');
+            // Mock req and res
+            const req = { 
+                method: 'GET', 
+                headers: { authorization: `Bearer ${process.env.CRON_SECRET}` } 
+            };
+            const res = {
+                status: (code) => ({
+                    json: (data) => console.log(`[LOCAL CRON] Cleanup Result (${code}):`, data)
+                }),
+                headersSent: false
+            };
+            await handler.default(req, res);
+        } catch (e) {
+            console.error('[LOCAL CRON] Error:', e);
+        }
+    }, 60 * 60 * 1000); // 1 hour
 });

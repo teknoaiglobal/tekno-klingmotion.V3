@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input Token Massal - TEKNO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --surface: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header i {
+            font-size: 40px;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 14px;
+            border-radius: var(--radius-md);
+            font-family: monospace;
+            font-size: 13px;
+            min-height: 200px;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn {
+            width: 100%;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn:disabled {
+            background: var(--surface);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            display: none;
+            font-size: 14px;
+        }
+
+        .result-box.success {
+            display: block;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+        }
+
+        .result-box.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .stat-item .val {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .val.green { color: var(--success); }
+        .val.yellow { color: var(--warning); }
+        .val.red { color: var(--danger); }
+
+        .stat-item .lbl {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <i class="fa-solid fa-key"></i>
+            <h2>Input Token Massal</h2>
+            <div class="subtitle">Paste token hasil dari extension ke bawah ini.<br>Satu token per baris (Format: FPSX...)</div>
+        </div>
+
+        <div class="form-group">
+            <label>
+                <span>Daftar Token</span>
+                <span id="lineCount">0 baris</span>
+            </label>
+            <textarea id="tokenInput" placeholder="FPSX...&#10;FPSX...&#10;FPSX..."></textarea>
+        </div>
+
+        <button id="submitBtn" class="btn">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Kirim Token</span>
+        </button>
+
+        <div id="resultBox" class="result-box">
+            <div id="resultMessage" style="font-weight: 500; margin-bottom: 8px;"></div>
+            <div id="statsGrid" class="stat-grid" style="display: none;">
+                <div class="stat-item">
+                    <div class="val green" id="statAdded">0</div>
+                    <div class="lbl">Berhasil</div>
+                </div>
+                <div class="stat-item">
+                    <div class="val yellow" id="statDups">0</div>
+                    <div class="lbl">Duplikat</div>
+                </div>
+                <div class="stat-item">
+                    <div class="val red" id="statInvalid">0</div>
+                    <div class="lbl">Invalid</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tokenInput = document.getElementById('tokenInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const lineCount = document.getElementById('lineCount');
+        const resultBox = document.getElementById('resultBox');
+        const resultMessage = document.getElementById('resultMessage');
+        const statsGrid = document.getElementById('statsGrid');
+        
+        // Count lines on input
+        tokenInput.addEventListener('input', () => {
+            const lines = tokenInput.value.split('\n').filter(l => l.trim() !== '').length;
+            lineCount.textContent = `${lines} baris`;
+        });
+
+        // Auto-submit on paste
+        tokenInput.addEventListener('paste', () => {
+            // Give the browser a tiny delay to actually populate the textarea value
+            setTimeout(() => {
+                const lines = tokenInput.value.split('\n').filter(l => l.trim() !== '').length;
+                if (lines > 0 && !submitBtn.disabled) {
+                    submitBtn.click();
+                }
+            }, 100);
+        });
+
+        submitBtn.addEventListener('click', async () => {
+            const text = tokenInput.value;
+            const tokens = text.split('\n').map(t => t.trim()).filter(t => t !== '');
+            
+            if (tokens.length === 0) {
+                showResult('error', 'Harap masukkan setidaknya satu token.');
+                return;
+            }
+
+            // Disable UI
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Memproses...</span>';
+            resultBox.className = 'result-box';
+            statsGrid.style.display = 'none';
+
+            try {
+                // To support standalone running or different ports
+                const apiUrl = window.location.origin.includes('localhost') 
+                    ? '/api/public/tokens' 
+                    : '/api/public/tokens'; 
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tokens })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Terjadi kesalahan pada server');
+                }
+
+                showResult('success', data.message);
+                
+                // Show stats
+                if (data.stats) {
+                    statsGrid.style.display = 'grid';
+                    document.getElementById('statAdded').textContent = data.stats.added;
+                    document.getElementById('statDups').textContent = data.stats.duplicates;
+                    document.getElementById('statInvalid').textContent = data.stats.invalid;
+                }
+
+                // Clear input if at least some were successful
+                if (data.stats && data.stats.added > 0) {
+                    tokenInput.value = '';
+                    lineCount.textContent = '0 baris';
+                }
+
+            } catch (error) {
+                showResult('error', error.message);
+            } finally {
+                // Enable UI
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> <span>Kirim Token</span>';
+            }
+        });
+
+        function showResult(type, message) {
+            resultBox.className = `result-box ${type}`;
+            resultMessage.textContent = message;
+        }
+    </script>
+</body>
+</html>

@@ -347,10 +347,12 @@
             </div>
             
             <!-- Bulk Actions -->
-            <div id="bulkActionsBar" style="display: none; background: var(--surface-active); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; gap: 8px; align-items: center;">
+            <div id="bulkActionsBar" style="display: none; background: var(--surface-active); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <span id="selectedCount" style="color: var(--text-secondary); font-size: 13px; margin-right: 8px;">0 dipilih</span>
                 <button onclick="bulkActivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--success); font-size: 12px;"><i class="fa-solid fa-check-circle"></i> Aktifkan Terpilih</button>
                 <button onclick="bulkDeactivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--danger); font-size: 12px;"><i class="fa-solid fa-times-circle"></i> Matikan Terpilih</button>
+                <button onclick="bulkDeleteKeys()" class="btn" style="padding: 6px 12px; width: auto; background: #991b1b; font-size: 12px; border: 1px solid #ef4444;"><i class="fa-solid fa-trash"></i> Hapus Terpilih</button>
+                <button onclick="triggerAutoCleanup()" class="btn" style="padding: 6px 12px; width: auto; background: #4f46e5; font-size: 12px; margin-left: auto;" title="Otomatis bersihkan key yang mati > 3 hari"><i class="fa-solid fa-broom"></i> Auto Cleanup</button>
                 <button onclick="clearSelection()" class="btn btn-outline" style="padding: 6px 12px; width: auto; font-size: 12px;"><i class="fa-solid fa-xmark"></i> Batal</button>
             </div>
             
@@ -394,8 +396,8 @@
         }
 
         // API Fetching
-        async function fetchAdminData() {
-            console.log('[ADMIN] Fetching admin data...');
+        async function fetchAdminData(isBackground = false) {
+            if (!isBackground) console.log('[ADMIN] Fetching admin data...');
             try {
                 const [uRes, kRes, sRes] = await Promise.all([
                     fetch('/api/admin/users'), fetch('/api/admin/apikeys'), fetch('/api/admin/settings')
@@ -757,7 +759,65 @@
                 fetchAdminData();
                 showToast(`${keyIds.length} token berhasil dimatikan!`, 'success');
             } catch(e) {
-                showToast('Gagal menonaktifkan token: ' + e.message, 'error');
+                showToast('Gagal mematikan token: ' + e.message, 'error');
+            }
+        };
+
+        window.bulkDeleteKeys = async () => {
+            const checkedBoxes = document.querySelectorAll('.key-checkbox:checked');
+            const keyIds = Array.from(checkedBoxes).map(cb => cb.dataset.keyId);
+            
+            if (keyIds.length === 0) return;
+
+            if (!confirm(`Anda yakin ingin menghapus ${keyIds.length} token ini secara manual?`)) return;
+            
+            try {
+                await fetch('/api/admin/apikeys/bulk', {
+                    method: 'DELETE',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ ids: keyIds })
+                });
+                
+                clearSelection();
+                fetchAdminData();
+                showToast(`${keyIds.length} token berhasil dihapus!`, 'success');
+            } catch(e) {
+                showToast('Gagal menghapus token: ' + e.message, 'error');
+            }
+        };
+
+        window.triggerAutoCleanup = async () => {
+            if (!confirm('Anda yakin ingin membersihkan (hapus) semua token yang sudah mati lebih dari 3 hari?')) return;
+
+            const btn = document.querySelector('button[onclick="triggerAutoCleanup()"]');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/admin/apikeys/cleanup', {
+                    method: 'POST', // POST required for manual admin trigger
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-auth-token': localStorage.getItem('texa_auth_token') || '' // Include auth token if needed
+                    }
+                });
+
+                if (!res.ok) {
+                    const errObj = await res.json();
+                    throw new Error(errObj.error || 'Server error');
+                }
+
+                const data = await res.json();
+                
+                clearSelection();
+                fetchAdminData();
+                showToast(`Berhasil! ${data.deleted_count} token lama telah dihapus.`, 'success');
+            } catch(e) {
+                showToast('Gagal cleanup: ' + e.message, 'error');
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
             }
         };
 
@@ -766,6 +826,18 @@
             // Small delay to ensure page-guard has completed
             setTimeout(() => {
                 fetchAdminData();
+                
+                // Real-time polling for keys (every 5 seconds)
+                // Only update if admin is NOT currently selecting checkboxes to avoid interrupting their work
+                setInterval(() => {
+                    const checkedBoxes = document.querySelectorAll('.key-checkbox:checked');
+                    const selectAllCheckbox = document.getElementById('selectAllKeys');
+                    
+                    if (checkedBoxes.length === 0 && (!selectAllCheckbox || !selectAllCheckbox.checked)) {
+                        fetchAdminData(true); // pass true to indicate background fetch (could be used to suppress loading indicator)
+                    }
+                }, 5000);
+                
             }, 500);
         });
     </script>
