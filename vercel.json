@@ -2,16 +2,6 @@
   "version": 2,
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    }
-  ],
   "crons": [
     {
       "path": "/api/admin/apikeys/cleanup",
@@ -29,7 +19,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/$1"
+      "destination": "/server.js"
     }
   ]
 }
