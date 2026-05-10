@@ -1,4 +1,4 @@
-import { getDb, saveDb } from '../db.js';
+import { getDb, saveDb } from '../../lib/db.js';
 
 // Verify authentication
 function verifyAuth(req) {

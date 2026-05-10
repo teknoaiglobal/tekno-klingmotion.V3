@@ -1,4 +1,4 @@
-import { getDb, saveDb } from '../../../api/db.js';
+import { getDb, saveDb } from '../../../lib/db.js';
 import { requireAuth } from '../../../api/auth.js';
 
 export default async function handler(req, res) {

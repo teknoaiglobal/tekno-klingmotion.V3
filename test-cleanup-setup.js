@@ -1,4 +1,4 @@
-import { getDb, saveDb } from './api/db.js';
+import { getDb, saveDb } from './lib/db.js';
 
 async function test() {
   const db = await getDb();

@@ -1,4 +1,4 @@
-import { getDb } from './db.js';
+import { getDb } from '../lib/db.js';
 
 // Server-side password storage (GANTI INI!)
 const ADMIN_PASSWORD_HASH = '28341e1d7cba1c79408761fac087fd1ba00983f7b95d6018109b681d2d751e85'; // SHA-256 hash of "Tekno@Project03"

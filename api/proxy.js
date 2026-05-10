@@ -44,7 +44,7 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: 'User ID is required to use server quota. Please login via Voucher.' });
             }
             
-            const { getDb, saveDb } = await import('./db.js');
+            const { getDb, saveDb } = await import('../lib/db.js');
             const db = await getDb();
             const user = db.users.find(u => u.id === userId);
             
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
             console.log(`[PROXY] Using TOP key: ${apiKeyToUse.substring(0, 8)}*** (ID: ${selectedKey.id})`);
         } else if (useServerQuota && req.method === 'GET') {
              // For polling GET requests, find the key that was used to create this task
-             const { getDb } = await import('./db.js');
+             const { getDb } = await import('../lib/db.js');
              const db = await getDb();
              
              const taskId = path.split('/').pop();
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
                 try {
                 // Pick key from ALL keys (not just active), starting from top
                 if (attempt > 0 && useServerQuota) {
-                    const { getDb } = await import('./db.js');
+                    const { getDb } = await import('../lib/db.js');
                     const db = await getDb();
                     
                     // Get ALL keys (including disabled ones)
@@ -164,7 +164,7 @@ export default async function handler(req, res) {
                     
                     // Only disable after 3 consecutive errors
                     if (keyErrorCount[apiKeyToUse] >= 3) {
-                        const { getDb, saveDb } = await import('./db.js');
+                        const { getDb, saveDb } = await import('../lib/db.js');
                         const db = await getDb();
                         const badKeyIndex = db.apiKeys.findIndex(k => k.key_string === apiKeyToUse);
                         
@@ -193,7 +193,7 @@ export default async function handler(req, res) {
                     
                     // Only increment usage on successful POST (Task Creation)
                     if (useServerQuota && response.ok && req.method === 'POST') {
-                        const { getDb, saveDb } = await import('./db.js');
+                        const { getDb, saveDb } = await import('../lib/db.js');
                         const db = await getDb();
                         const usedKey = db.apiKeys.find(k => k.key_string === apiKeyToUse);
                         if (usedKey) usedKey.usage_count += 1;
@@ -210,7 +210,7 @@ export default async function handler(req, res) {
             // Refund if totally failed to create task
             const userId = req.headers['x-texa-user-id'];
             if (req.method === 'POST' && useServerQuota && userId && (!response || !response.ok)) {
-                 const { getDb, saveDb } = await import('./db.js');
+                 const { getDb, saveDb } = await import('../lib/db.js');
                  const db = await getDb();
                  const user = db.users.find(u => u.id === userId);
                  if (user) {
@@ -223,7 +223,7 @@ export default async function handler(req, res) {
                     const jsonData = JSON.parse(data);
                     const taskId = jsonData.data?.task_id || jsonData.task_id;
                     if (taskId) {
-                        const { getDb, saveDb } = await import('./db.js');
+                        const { getDb, saveDb } = await import('../lib/db.js');
                         const db = await getDb();
                         db.tasks = db.tasks || [];
                         db.tasks.push({ taskId, userId, status: 'PENDING', apiKey: apiKeyToUse });
@@ -248,7 +248,7 @@ export default async function handler(req, res) {
                     }
                     
                     if (shouldRefund) {
-                        const { getDb, saveDb } = await import('./db.js');
+                        const { getDb, saveDb } = await import('../lib/db.js');
                         const db = await getDb();
                         db.tasks = db.tasks || [];
                         const task = db.tasks.find(t => t.taskId === taskId && t.status !== 'REFUNDED');
