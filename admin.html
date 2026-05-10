@@ -639,7 +639,7 @@
         // Move API Key Up (higher priority)
         window.moveKeyUp = async (id) => {
             try {
-                await fetch('/api/admin/apikeys/reorder', {
+                await fetch('/api/admin/apikeys?action=reorder', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ id, direction: 'up' })
@@ -654,7 +654,7 @@
         // Move API Key Down (lower priority)
         window.moveKeyDown = async (id) => {
             try {
-                await fetch('/api/admin/apikeys/reorder', {
+                await fetch('/api/admin/apikeys?action=reorder', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ id, direction: 'down' })
@@ -727,7 +727,7 @@
             
             try {
                 // Send bulk update request
-                await fetch('/api/admin/apikeys/bulk', {
+                await fetch('/api/admin/apikeys?action=bulk', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ ids: keyIds, is_active: true })
@@ -749,7 +749,7 @@
             
             try {
                 // Send bulk update request
-                await fetch('/api/admin/apikeys/bulk', {
+                await fetch('/api/admin/apikeys?action=bulk', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ ids: keyIds, is_active: false })
@@ -772,7 +772,7 @@
             if (!confirm(`Anda yakin ingin menghapus ${keyIds.length} token ini secara manual?`)) return;
             
             try {
-                await fetch('/api/admin/apikeys/bulk', {
+                await fetch('/api/admin/apikeys?action=bulk', {
                     method: 'DELETE',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({ ids: keyIds })
