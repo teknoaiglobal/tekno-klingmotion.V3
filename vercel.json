@@ -1,7 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run build --if-present",
-  "installCommand": "npm ci --omit=dev --no-audit --no-fund",
+  "outputDirectory": ".",
   "crons": [
     {
       "path": "/api/admin/apikeys/cleanup",
