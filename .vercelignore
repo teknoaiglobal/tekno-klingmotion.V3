@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+.env
+.env.*
+scripts
+tambahan
+test-*.js
+server.js
+*.md
+gofile_response.json
+result.json
