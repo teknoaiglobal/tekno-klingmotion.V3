@@ -14,11 +14,11 @@
     },
     {
       "source": "/proxy.php",
-      "destination": "/api/proxy.js"
+      "destination": "/api/proxy"
     },
     {
       "source": "/api/auth/:action",
-      "destination": "/api/auth.js"
+      "destination": "/api/auth?action=:action"
     }
   ]
 }
