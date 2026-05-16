@@ -1099,7 +1099,8 @@
                 currentTaskId: null,
                 currentModel: null,
                 pollingInterval: null,
-                subtextInterval: null
+                subtextInterval: null,
+                adminSettings: {}
             };
 
             // --- DOM Elements ---
@@ -1624,7 +1625,8 @@
                     activeTasks.push({ id: taskId, model: model, timestamp: Date.now(), payload: payload });
                     localStorage.setItem('texa_active_tasks', JSON.stringify(activeTasks));
 
-                    showToast('Tugas berhasil dibuat! Proses berjalan di latar belakang.', 'success');
+                    const notifText = state.adminSettings.notifSuccessCreate || 'Tugas berhasil dibuat! Proses berjalan di latar belakang.';
+                    showToast(notifText, 'success');
                     
                     // Reset UI for next generation
                     state.imageCatboxUrl = null;
@@ -1649,11 +1651,11 @@
 
             // Generic error sanitizer
             function sanitizeError(msg) {
-                if (!msg) return 'Terjadi kesalahan, silakan coba lagi';
+                if (!msg) return state.adminSettings.notifFailed || 'Terjadi kesalahan, silakan coba lagi';
                 msg = String(msg).replace(/freepik/gi, 'server').replace(/daily.?limit/gi, 'batas harian').replace(/rate.?limit/gi, 'batas request');
                 if (msg.toLowerCase().includes('insufficient') || msg.toLowerCase().includes('exhausted') || msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('too many')) {
                     const isManual = (localStorage.getItem('texa_api_mode') || 'server') === 'manual';
-                    return isManual ? 'Token Manual Anda Limit / Habis' : 'Silakan coba lagi (Sedang merotasi token server)';
+                    return isManual ? 'Token Manual Anda Limit / Habis' : (state.adminSettings.notifTokenRotation || 'Silakan coba lagi (Sedang merotasi token server)');
                 }
                 return msg;
             }
@@ -1765,7 +1767,8 @@
                             if (taskData.status === 'COMPLETED') {
                                 // Save to history
                                 saveToHistory(taskData.generated[0], task.id, task.model);
-                                showToast(`Tugas selesai!`, 'success');
+                                const notifComplete = state.adminSettings.notifSuccessComplete || 'Tugas selesai!';
+                                showToast(notifComplete, 'success');
                                 activeTasks.splice(i, 1);
                                 i--;
                                 tasksUpdated = true;
@@ -1837,6 +1840,16 @@
             }
 
             function init() {
+                // Fetch admin settings for notifications
+                fetch('/api/admin/settings')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.settings) {
+                            state.adminSettings = data.settings;
+                        }
+                    })
+                    .catch(e => console.log('Failed to load admin settings', e));
+
                 if (state.apiKey) {
                     els.apiKey.value = state.apiKey;
                     checkApiStatus();

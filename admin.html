@@ -316,75 +316,166 @@
         document.querySelector('.container').style.maxWidth = '800px';
 
         const adminHtml = `
+            <style>
+                .compact-input {
+                    background: rgba(0,0,0,0.3); 
+                    border: 1px solid var(--border); 
+                    color: white; 
+                    padding: 6px 8px; 
+                    border-radius: 4px; 
+                    font-size: 12px;
+                    width: 100%;
+                    box-sizing: border-box;
+                    transition: border-color 0.2s;
+                }
+                .compact-input:focus { border-color: var(--accent); outline: none; }
+                .mitra-box {
+                    display: none; 
+                    flex-direction: column; 
+                    gap: 6px; 
+                    margin-top: 6px; 
+                    padding: 10px; 
+                    background: rgba(255,255,255,0.03); 
+                    border-radius: 6px; 
+                    border: 1px dashed var(--border);
+                }
+                .member-table th { padding: 10px 8px; font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; }
+                .member-table td { padding: 10px 8px; vertical-align: top; border-bottom: 1px solid var(--border); }
+                .member-table-wrapper { overflow-x: auto; margin-bottom: 24px; border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.2); }
+                
+                @media (max-width: 576px) {
+                    .compact-input { font-size: 13px; padding: 8px; }
+                    .member-table th, .member-table td { padding: 8px 6px; }
+                }
+                .section-header {
+                    cursor: pointer;
+                    user-select: none;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 16px;
+                    padding: 8px 0;
+                    transition: opacity 0.2s;
+                }
+                .section-header:hover { opacity: 0.8; }
+                .chevron-icon { transition: transform 0.3s ease; }
+            </style>
+
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 32px 0;">
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div class="section-header" onclick="toggleSection('memberContent', 'memberChevron')">
                 <h2 style="margin: 0;"><i class="fa-solid fa-users"></i> Member Management</h2>
-                <button onclick="addBlankUser()" class="btn btn-primary" style="padding: 6px 12px; width: auto; font-size: 13px;"><i class="fa-solid fa-plus"></i> Add Member</button>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button onclick="addBlankUser(); event.stopPropagation();" class="btn btn-primary" style="padding: 6px 12px; width: auto; font-size: 13px;"><i class="fa-solid fa-plus"></i> Add Member</button>
+                    <i id="memberChevron" class="fa-solid fa-chevron-down chevron-icon"></i>
+                </div>
             </div>
             
-            <div style="overflow-x: auto; margin-bottom: 24px;">
-                <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 13px;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid var(--border); color: var(--text-secondary);">
-                            <th style="padding: 8px;">Name</th>
-                            <th style="padding: 8px;">Plan</th>
-                            <th style="padding: 8px;">Hari</th>
-                            <th style="padding: 8px;">Credits</th>
-                            <th style="padding: 8px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody"><tr><td colspan="4">Loading...</td></tr></tbody>
-                </table>
+            <div id="memberContent" style="display: block;">
+                <div class="member-table-wrapper">
+                    <table class="member-table" style="width: 100%; text-align: left; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                                <th>Name / Voucher</th>
+                                <th>Plan</th>
+                                <th>Hari</th>
+                                <th>Credits</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"><tr><td colspan="5" style="text-align:center; padding:20px;">Loading...</td></tr></tbody>
+                    </table>
+                </div>
             </div>
 
 
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 32px 0;">
 
-            <h2><i class="fa-solid fa-key"></i> Daftar Token Server Admin (Rotasi)</h2>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                <input type="text" id="newApiKey" placeholder="Input Token..." style="flex:1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px; font-family: monospace;">
-                <button id="addKeyBtn" class="btn" style="padding: 8px 16px; width: auto; background: var(--success);">Add Key</button>
+            <div class="section-header" onclick="toggleSection('tokenContent', 'tokenChevron')">
+                <h2 style="margin: 0;"><i class="fa-solid fa-key"></i> Daftar Token Server Admin (Rotasi)</h2>
+                <i id="tokenChevron" class="fa-solid fa-chevron-down chevron-icon"></i>
             </div>
             
-            <!-- Bulk Actions -->
-            <div id="bulkActionsBar" style="display: none; background: var(--surface-active); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <span id="selectedCount" style="color: var(--text-secondary); font-size: 13px; margin-right: 8px;">0 dipilih</span>
-                <button onclick="bulkActivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--success); font-size: 12px;"><i class="fa-solid fa-check-circle"></i> Aktifkan Terpilih</button>
-                <button onclick="bulkDeactivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--danger); font-size: 12px;"><i class="fa-solid fa-times-circle"></i> Matikan Terpilih</button>
-                <button onclick="bulkDeleteKeys()" class="btn" style="padding: 6px 12px; width: auto; background: #991b1b; font-size: 12px; border: 1px solid #ef4444;"><i class="fa-solid fa-trash"></i> Hapus Terpilih</button>
-                <button onclick="triggerAutoCleanup()" class="btn" style="padding: 6px 12px; width: auto; background: #4f46e5; font-size: 12px; margin-left: auto;" title="Otomatis bersihkan key yang mati > 3 hari"><i class="fa-solid fa-broom"></i> Auto Cleanup</button>
-                <button onclick="clearSelection()" class="btn btn-outline" style="padding: 6px 12px; width: auto; font-size: 12px;"><i class="fa-solid fa-xmark"></i> Batal</button>
-            </div>
-            
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 13px;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid var(--border); color: var(--text-secondary);">
-                            <th style="padding: 8px; width: 30px;">
-                                <input type="checkbox" id="selectAllKeys" onchange="toggleSelectAll(this)" style="cursor: pointer;" title="Pilih Semua">
-                            </th>
-                            <th style="padding: 8px;">API Key</th>
-                            <th style="padding: 8px;">Usage</th>
-                            <th style="padding: 8px;">Status</th>
-                            <th style="padding: 8px;">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="keysTableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
-                </table>
+            <div id="tokenContent" style="display: block;">
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <input type="text" id="newApiKey" placeholder="Input Token..." style="flex:1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px; font-family: monospace;">
+                    <button id="addKeyBtn" class="btn" style="padding: 8px 16px; width: auto; background: var(--success);">Add Key</button>
+                </div>
+                
+                <!-- Bulk Actions -->
+                <div id="bulkActionsBar" style="display: none; background: var(--surface-active); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <span id="selectedCount" style="color: var(--text-secondary); font-size: 13px; margin-right: 8px;">0 dipilih</span>
+                    <button onclick="bulkActivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--success); font-size: 12px;"><i class="fa-solid fa-check-circle"></i> Aktifkan Terpilih</button>
+                    <button onclick="bulkDeactivateKeys()" class="btn" style="padding: 6px 12px; width: auto; background: var(--danger); font-size: 12px;"><i class="fa-solid fa-times-circle"></i> Matikan Terpilih</button>
+                    <button onclick="bulkDeleteKeys()" class="btn" style="padding: 6px 12px; width: auto; background: #991b1b; font-size: 12px; border: 1px solid #ef4444;"><i class="fa-solid fa-trash"></i> Hapus Terpilih</button>
+                    <button onclick="triggerAutoCleanup()" class="btn" style="padding: 6px 12px; width: auto; background: #4f46e5; font-size: 12px; margin-left: auto;" title="Otomatis bersihkan key yang mati > 3 hari"><i class="fa-solid fa-broom"></i> Auto Cleanup</button>
+                    <button onclick="clearSelection()" class="btn btn-outline" style="padding: 6px 12px; width: auto; font-size: 12px;"><i class="fa-solid fa-xmark"></i> Batal</button>
+                </div>
+                
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border); color: var(--text-secondary);">
+                                <th style="padding: 8px; width: 30px;">
+                                    <input type="checkbox" id="selectAllKeys" onchange="toggleSelectAll(this)" style="cursor: pointer;" title="Pilih Semua">
+                                </th>
+                                <th style="padding: 8px;">API Key</th>
+                                <th style="padding: 8px;">Usage</th>
+                                <th style="padding: 8px;">Status</th>
+                                <th style="padding: 8px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="keysTableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+                    </table>
+                </div>
             </div>
 
             <hr style="border: 0; border-top: 1px solid var(--border); margin: 32px 0;">
-            <h2><i class="fa-brands fa-whatsapp"></i> Pengaturan Notifikasi Topup</h2>
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                <div>
-                    <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Link Redirect WhatsApp Admin</label>
-                    <input type="text" id="adminWhatsappLink" placeholder="Contoh: https://wa.me/6281234567890" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px;">
+            
+            <div class="section-header" onclick="toggleSection('notifContent', 'notifChevron')">
+                <h2 style="margin: 0;"><i class="fa-solid fa-bell"></i> Pengaturan Teks Notifikasi & Topup</h2>
+                <i id="notifChevron" class="fa-solid fa-chevron-down chevron-icon"></i>
+            </div>
+
+            <div id="notifContent" style="display: block;">
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; background: var(--surface-active); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                    <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary);"><i class="fa-brands fa-whatsapp"></i> Topup & Kredit Habis</h3>
+                    <div>
+                        <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Link Redirect WhatsApp Admin</label>
+                        <input type="text" id="adminWhatsappLink" placeholder="Contoh: https://wa.me/6281234567890" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Teks Peringatan Kredit Habis</label>
+                        <textarea id="adminPopupText" rows="2" placeholder="Kredit Anda tidak mencukupi (0)." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <hr style="border: 0; border-top: 1px solid var(--border); margin: 8px 0;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-primary);"><i class="fa-solid fa-message"></i> Notifikasi Toast Frontend</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="font-size: 12px; color: var(--success); margin-bottom: 4px; display: block;">Tugas Berhasil Dibuat (Sukses)</label>
+                            <input type="text" id="notifSuccessCreate" placeholder="Tugas berhasil dibuat! Proses berjalan di latar belakang." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--success); color: white; padding: 8px; border-radius: 8px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: var(--success); margin-bottom: 4px; display: block;">Video Selesai Generate (Sukses)</label>
+                            <input type="text" id="notifSuccessComplete" placeholder="Tugas selesai!" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--success); color: white; padding: 8px; border-radius: 8px;">
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="font-size: 12px; color: var(--danger); margin-bottom: 4px; display: block;">Gagal Generate / Error (Gagal)</label>
+                            <input type="text" id="notifFailed" placeholder="Terjadi kesalahan, silakan coba lagi" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--danger); color: white; padding: 8px; border-radius: 8px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #f59e0b; margin-bottom: 4px; display: block;">Token Habis / Rotasi (Info)</label>
+                            <input type="text" id="notifTokenRotation" placeholder="Silakan coba lagi (Sedang merotasi token server)" style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid #f59e0b; color: white; padding: 8px; border-radius: 8px;">
+                        </div>
+                    </div>
+
+                    <button onclick="saveAdminSettings()" class="btn btn-primary" style="width: auto; align-self: flex-start; padding: 8px 16px; margin-top: 8px;"><i class="fa-solid fa-floppy-disk"></i> Simpan Semua Teks</button>
                 </div>
-                <div>
-                    <label style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: block;">Teks Peringatan Kredit Habis</label>
-                    <textarea id="adminPopupText" rows="3" placeholder="Kredit Anda tidak mencukupi (0)." style="width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 8px; resize: vertical;"></textarea>
-                </div>
-                <button onclick="saveAdminSettings()" class="btn btn-primary" style="width: auto; align-self: flex-start; padding: 8px 16px;"><i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan</button>
             </div>
         `;
         
@@ -394,6 +485,19 @@
             backLink.href = '/';
             backLink.insertAdjacentHTML('beforebegin', adminHtml);
         }
+
+        // Section Toggle Logic
+        window.toggleSection = (contentId, chevronId) => {
+            const content = document.getElementById(contentId);
+            const chevron = document.getElementById(chevronId);
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.display = 'none';
+                chevron.style.transform = 'rotate(-90deg)';
+            }
+        };
 
         // API Fetching
         async function fetchAdminData(isBackground = false) {
@@ -424,6 +528,11 @@
                 if (sData.settings) {
                     document.getElementById('adminWhatsappLink').value = sData.settings.whatsappLink || '';
                     document.getElementById('adminPopupText').value = sData.settings.popupText || '';
+                    
+                    document.getElementById('notifSuccessCreate').value = sData.settings.notifSuccessCreate || '';
+                    document.getElementById('notifSuccessComplete').value = sData.settings.notifSuccessComplete || '';
+                    document.getElementById('notifFailed').value = sData.settings.notifFailed || '';
+                    document.getElementById('notifTokenRotation').value = sData.settings.notifTokenRotation || '';
                 }
             } catch (e) {
                 console.error("[ADMIN] Gagal load data admin:", e);
@@ -437,35 +546,40 @@
                     ? Math.max(0, Math.ceil((new Date(u.subscription_end_date) - Date.now()) / (1000 * 60 * 60 * 24)))
                     : 0;
                 return `
-                <tr style="border-bottom: 1px solid var(--border);">
-                    <td style="padding: 8px;">
-                        <div style="display:flex; flex-direction:column; gap:4px;">
-                            <input id="name_${u.id}" type="text" value="${u.name || ''}" placeholder="Nama Custom" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px; font-size:12px;">
+                <tr>
+                    <td>
+                        <div style="display:flex; flex-direction:column; gap:6px; min-width: 160px;">
+                            <input id="name_${u.id}" type="text" value="${u.name || ''}" placeholder="Nama Custom" class="compact-input">
                             <div style="display:flex; gap:4px;">
-                                <input id="voucher_${u.id}" type="text" value="${u.voucher_code || ''}" placeholder="Kode Voucher" style="flex:1; background: rgba(0,0,0,0.3); border: 1px solid var(--accent); color: var(--accent); padding: 4px; border-radius: 4px; font-size:12px; font-family:monospace;">
+                                <input id="voucher_${u.id}" type="text" value="${u.voucher_code || ''}" placeholder="Kode Voucher" class="compact-input" style="font-family:monospace; color:var(--accent);">
                                 <button onclick="document.getElementById('voucher_${u.id}').value = 'TEKNO-' + Math.random().toString(36).substring(2, 8).toUpperCase()" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; margin: 0; width: auto;" title="Generate Auto Code"><i class="fa-solid fa-bolt"></i></button>
                             </div>
-                            <input id="mitra_wa_${u.id}" type="text" value="${u.mitra_whatsapp || ''}" placeholder="Mitra WhatsApp Link (Opsional)" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px; font-size:11px;">
-                            <textarea id="mitra_txt_${u.id}" placeholder="Mitra Popup Text (Opsional)" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px; font-size:11px; resize:vertical; min-height:40px;">${u.mitra_popup_text || ''}</textarea>
+                            <button onclick="const el = document.getElementById('mitra_${u.id}'); el.style.display = el.style.display === 'none' ? 'flex' : 'none';" class="btn btn-outline" style="padding: 4px 8px; font-size: 10px; width: fit-content; margin: 0; border-color: rgba(255,255,255,0.1); color: var(--text-secondary);">
+                                <i class="fa-solid fa-sliders"></i> Mitra Config
+                            </button>
+                            <div id="mitra_${u.id}" class="mitra-box">
+                                <input id="mitra_wa_${u.id}" type="text" value="${u.mitra_whatsapp || ''}" placeholder="WA Link (Opsional)" class="compact-input">
+                                <textarea id="mitra_txt_${u.id}" placeholder="Popup Text (Opsional)" class="compact-input" style="resize:vertical; min-height:40px;">${u.mitra_popup_text || ''}</textarea>
+                            </div>
                         </div>
                     </td>
-                    <td style="padding: 8px; vertical-align:top;">
-                        <select id="plan_${u.id}" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px;">
+                    <td>
+                        <select id="plan_${u.id}" class="compact-input">
                             <option value="free" ${u.plan==='free'?'selected':''}>Free</option>
                             <option value="pro" ${u.plan==='pro'?'selected':''}>Pro</option>
                             <option value="vip" ${u.plan==='vip'?'selected':''}>VIP</option>
                         </select>
                     </td>
-                    <td style="padding: 8px; vertical-align:top;">
-                        <input id="days_${u.id}" type="number" value="${remainingDays}" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px; width:60px;">
+                    <td>
+                        <input id="days_${u.id}" type="number" value="${remainingDays}" class="compact-input" style="width:60px; min-width:50px;">
                     </td>
-                    <td style="padding: 8px; vertical-align:top;">
-                        <input id="credits_${u.id}" type="number" value="${u.credits}" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; padding: 4px; border-radius: 4px; width:60px;">
+                    <td>
+                        <input id="credits_${u.id}" type="number" value="${u.credits}" class="compact-input" style="width:70px; min-width:60px;">
                     </td>
-                    <td style="padding: 8px; vertical-align:top;">
-                        <div style="display:flex; gap:4px;">
-                            <button onclick="saveUser('${u.id}')" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; margin: 0; width: auto;"><i class="fa-solid fa-floppy-disk"></i></button>
-                            <button onclick="deleteUser('${u.id}', this)" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px; color: var(--danger); border-color: var(--danger); margin: 0; width: auto; transition: 0.2s;"><i class="fa-solid fa-trash"></i></button>
+                    <td>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button onclick="saveUser('${u.id}')" class="btn btn-primary" style="padding: 6px 10px; font-size: 12px; margin: 0; width: auto;" title="Simpan"><i class="fa-solid fa-floppy-disk"></i></button>
+                            <button onclick="deleteUser('${u.id}', this)" class="btn btn-outline" style="padding: 6px 10px; font-size: 12px; color: var(--danger); border-color: var(--danger); margin: 0; width: auto; transition: 0.2s;" title="Hapus"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -550,11 +664,24 @@
         window.saveAdminSettings = async () => {
             const wa = document.getElementById('adminWhatsappLink').value.trim();
             const pop = document.getElementById('adminPopupText').value.trim();
+            
+            const nSuccessCreate = document.getElementById('notifSuccessCreate').value.trim();
+            const nSuccessComplete = document.getElementById('notifSuccessComplete').value.trim();
+            const nFailed = document.getElementById('notifFailed').value.trim();
+            const nTokenRot = document.getElementById('notifTokenRotation').value.trim();
+            
             try {
                 await fetch('/api/admin/settings', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ whatsappLink: wa, popupText: pop })
+                    body: JSON.stringify({ 
+                        whatsappLink: wa, 
+                        popupText: pop,
+                        notifSuccessCreate: nSuccessCreate,
+                        notifSuccessComplete: nSuccessComplete,
+                        notifFailed: nFailed,
+                        notifTokenRotation: nTokenRot
+                    })
                 });
                 showToast('Pengaturan Notifikasi berhasil disimpan!', 'success');
             } catch(e) {
@@ -829,12 +956,23 @@
                 
                 // Real-time polling for keys (every 5 seconds)
                 // Only update if admin is NOT currently selecting checkboxes to avoid interrupting their work
-                setInterval(() => {
+                setInterval(async () => {
                     const checkedBoxes = document.querySelectorAll('.key-checkbox:checked');
                     const selectAllCheckbox = document.getElementById('selectAllKeys');
                     
-                    if (checkedBoxes.length === 0 && (!selectAllCheckbox || !selectAllCheckbox.checked)) {
-                        fetchAdminData(true); // pass true to indicate background fetch (could be used to suppress loading indicator)
+                    // Cek apakah admin sedang fokus mengetik di input manapun
+                    const isTyping = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+                    
+                    if (checkedBoxes.length === 0 && (!selectAllCheckbox || !selectAllCheckbox.checked) && !isTyping) {
+                        // HANYA update API keys (untuk melihat usage/status real-time), 
+                        // JANGAN panggil fetchAdminData() penuh agar form Users tidak ter-reset.
+                        try {
+                            const kRes = await fetch('/api/admin/apikeys');
+                            const kData = await kRes.json();
+                            renderApiKeys(kData.apiKeys || []);
+                        } catch (e) {
+                            console.error("[ADMIN] Background fetch keys error:", e);
+                        }
                     }
                 }, 5000);
                 

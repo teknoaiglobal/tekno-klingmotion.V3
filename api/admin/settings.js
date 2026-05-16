@@ -29,10 +29,20 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PUT' || req.method === 'POST') {
-    const { popupText, whatsappLink } = req.body || {};
+    const { 
+      popupText, whatsappLink, 
+      notifSuccessCreate, notifSuccessComplete, 
+      notifFailed, notifTokenRotation, notifErrorDetail 
+    } = req.body || {};
     
     if (popupText !== undefined) db.settings.popupText = popupText;
     if (whatsappLink !== undefined) db.settings.whatsappLink = whatsappLink;
+    
+    if (notifSuccessCreate !== undefined) db.settings.notifSuccessCreate = notifSuccessCreate;
+    if (notifSuccessComplete !== undefined) db.settings.notifSuccessComplete = notifSuccessComplete;
+    if (notifFailed !== undefined) db.settings.notifFailed = notifFailed;
+    if (notifTokenRotation !== undefined) db.settings.notifTokenRotation = notifTokenRotation;
+    if (notifErrorDetail !== undefined) db.settings.notifErrorDetail = notifErrorDetail;
     
     await saveDb();
     return res.status(200).json({ success: true, settings: db.settings });
