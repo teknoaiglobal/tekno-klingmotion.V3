@@ -18,7 +18,15 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing "path" parameter' });
         }
 
-        const targetUrl = `https://api.freepik.com${path}`;
+        let targetUrl = `https://api.freepik.com${path}`;
+        
+        // --- MAGNIFIC API OVERRIDE ---
+        // If the route contains kling models, we should redirect to Magnific API
+        // as per the new documentation in `tambahan/doc kling3`
+        if (path && (path.includes('kling-v2-6') || path.includes('kling-v3'))) {
+            targetUrl = `https://api.magnific.com${path}`;
+        }
+        
         const apiKey = req.headers['x-freepik-api-key'] || '';
 
         const fetchOptions = {
@@ -26,9 +34,9 @@ export default async function handler(req, res) {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Origin': 'https://www.freepik.com',
-                'Referer': 'https://www.freepik.com/'
+                // Add essential headers to appear as a legitimate API client
+                'User-Agent': 'curl/8.7.1',
+                'Accept-Language': 'en-US,en;q=0.9',
             }
         };
 
@@ -103,7 +111,12 @@ export default async function handler(req, res) {
         }
 
         if (apiKeyToUse) {
-            fetchOptions.headers['x-freepik-api-key'] = apiKeyToUse;
+            // Support both Freepik and Magnific API key headers depending on the URL
+            if (targetUrl.includes('magnific.com')) {
+                fetchOptions.headers['x-magnific-api-key'] = apiKeyToUse;
+            } else {
+                fetchOptions.headers['x-freepik-api-key'] = apiKeyToUse;
+            }
         }
 
         if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
@@ -136,7 +149,13 @@ export default async function handler(req, res) {
                     const keyIndex = attempt % allKeys.length;
                     const selectedKey = allKeys[keyIndex];
                     apiKeyToUse = selectedKey.key_string;
-                    fetchOptions.headers['x-freepik-api-key'] = apiKeyToUse;
+                    
+                    if (targetUrl.includes('magnific.com')) {
+                        fetchOptions.headers['x-magnific-api-key'] = apiKeyToUse;
+                    } else {
+                        fetchOptions.headers['x-freepik-api-key'] = apiKeyToUse;
+                    }
+                    
                     res.setHeader('X-Used-Key-Hint', apiKeyToUse.substring(0, 8) + '***');
                     console.log(`[PROXY] Retry #${attempt} using key #${keyIndex + 1}: ${apiKeyToUse.substring(0, 8)}*** (Status: ${selectedKey.is_active ? 'Active' : 'Disabled'})`);
                 }
@@ -151,6 +170,11 @@ export default async function handler(req, res) {
                     if (!response.ok && data.toLowerCase().includes('insufficient')) hasError = true;
                     if (!response.ok && data.toLowerCase().includes('limit')) hasError = true;
                     if (!response.ok && data.toLowerCase().includes('quota')) hasError = true;
+                }
+                
+                // Fast-fail if IP is blocked, no need to retry with other keys
+                if (!response.ok && data.toLowerCase().includes('suspicious activity')) {
+                     return res.status(403).json({ error: 'Task Failed: Your IP has been blocked due to suspicious activity. Please try again later or use a VPN.' });
                 }
 
                 if (hasError) {

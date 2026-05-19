@@ -10,12 +10,6 @@ function verifyAuth(req) {
 }
 
 export default async function handler(req, res) {
-  // Check authentication
-  const auth = verifyAuth(req);
-  if (!auth.valid) {
-    return res.status(401).json({ error: auth.error });
-  }
-
   const db = await getDb();
   if (!db.settings) {
     db.settings = { 
@@ -24,8 +18,15 @@ export default async function handler(req, res) {
     };
   }
 
+  // Allow public access to GET settings for the frontend
   if (req.method === 'GET') {
     return res.status(200).json({ settings: db.settings });
+  }
+
+  // Check authentication for PUT/POST (admin only)
+  const auth = verifyAuth(req);
+  if (!auth.valid) {
+    return res.status(401).json({ error: auth.error });
   }
 
   if (req.method === 'PUT' || req.method === 'POST') {
